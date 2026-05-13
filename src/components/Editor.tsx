@@ -11,12 +11,11 @@ import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
-import { IndexeddbPersistence } from 'y-indexeddb';
 import * as Y from 'yjs';
 
+import { useCollaboration, type ConnectionStatus } from '@/hooks/useCollaboration';
+
 const COLLAB_FIELD = 'default';
-/** Same IndexedDB key across reloads; use the same string if you add a websocket room later. */
-const INDEXEDDB_DOC_NAME = 'live-doc';
 
 const initialContent = `<h1>Live doc</h1>
 <p>This editor uses <strong>bold</strong>, <em>italic</em>, headings, and code blocks.</p>
@@ -33,7 +32,13 @@ const editorContentClassName = [
 	'[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-[inherit] [&_pre_code]:text-[inherit]'
 ].join(' ');
 
-function EditorWithYDoc({ ydoc }: { ydoc: Y.Doc }) {
+function EditorWithYDoc({
+	ydoc,
+	connectionStatus
+}: {
+	ydoc: Y.Doc;
+	connectionStatus: ConnectionStatus;
+}) {
 	const [yUpdateCount, setYUpdateCount] = useState(0);
 	const [encodedStateBytes, setEncodedStateBytes] = useState(0);
 	const [prosemirrorJsonText, setProsemirrorJsonText] = useState('');
@@ -94,6 +99,8 @@ function EditorWithYDoc({ ydoc }: { ydoc: Y.Doc }) {
 	return (
 		<div className='space-y-3'>
 			<dl className='grid gap-1 rounded-md border border-neutral-900/10 bg-neutral-900/4 px-3 py-2 font-mono text-xs text-neutral-700 sm:grid-cols-[auto_1fr] sm:gap-x-4'>
+				<dt className='text-neutral-500'>Hocuspocus</dt>
+				<dd>{connectionStatus}</dd>
 				<dt className='text-neutral-500'>Y.Doc updates</dt>
 				<dd>{yUpdateCount}</dd>
 				<dt className='text-neutral-500'>encodeStateAsUpdate bytes</dt>
@@ -115,33 +122,19 @@ function EditorWithYDoc({ ydoc }: { ydoc: Y.Doc }) {
 }
 
 export function Editor() {
-	const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
+	const { ydoc, ready, connectionStatus, error } = useCollaboration();
 
-	useEffect(() => {
-		const doc = new Y.Doc();
-		const persistence = new IndexeddbPersistence(INDEXEDDB_DOC_NAME, doc);
-		let cancelled = false;
-
-		const onSynced = () => {
-			if (!cancelled) {
-				setYdoc(doc);
-			}
-		};
-
-		persistence.on('synced', onSynced);
-
-		return () => {
-			cancelled = true;
-			persistence.off('synced', onSynced);
-			void persistence.destroy();
-			doc.destroy();
-			setYdoc(null);
-		};
-	}, []);
-
-	if (!ydoc) {
-		return <p className='text-sm text-neutral-500'>Preparing editor…</p>;
+	if (!ready || !ydoc) {
+		return (
+			<div className='space-y-1 text-sm text-neutral-500'>
+				<p>Preparing editor…</p>
+				<p className='font-mono text-xs text-neutral-600'>
+					Hocuspocus: {connectionStatus}
+					{error ? ` — ${error}` : ''}
+				</p>
+			</div>
+		);
 	}
 
-	return <EditorWithYDoc ydoc={ydoc} />;
+	return <EditorWithYDoc ydoc={ydoc} connectionStatus={connectionStatus} />;
 }
