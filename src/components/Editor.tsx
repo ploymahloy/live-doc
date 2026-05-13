@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Collaboration from '@tiptap/extension-collaboration';
 import Bold from '@tiptap/extension-bold';
 import CodeBlock from '@tiptap/extension-code-block';
@@ -10,10 +11,12 @@ import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
-import { useEffect, useState } from 'react';
+import { IndexeddbPersistence } from 'y-indexeddb';
 import * as Y from 'yjs';
 
 const COLLAB_FIELD = 'default';
+/** Same IndexedDB key across reloads; use the same string if you add a websocket room later. */
+const INDEXEDDB_DOC_NAME = 'live-doc';
 
 const initialContent = `<h1>Live doc</h1>
 <p>This editor uses <strong>bold</strong>, <em>italic</em>, headings, and code blocks.</p>
@@ -116,20 +119,23 @@ export function Editor() {
 
 	useEffect(() => {
 		const doc = new Y.Doc();
+		const persistence = new IndexeddbPersistence(INDEXEDDB_DOC_NAME, doc);
 		let cancelled = false;
 
-		queueMicrotask(() => {
+		const onSynced = () => {
 			if (!cancelled) {
 				setYdoc(doc);
 			}
-		});
+		};
+
+		persistence.on('synced', onSynced);
 
 		return () => {
 			cancelled = true;
-			queueMicrotask(() => {
-				setYdoc(null);
-				doc.destroy();
-			});
+			persistence.off('synced', onSynced);
+			void persistence.destroy();
+			doc.destroy();
+			setYdoc(null);
 		};
 	}, []);
 
