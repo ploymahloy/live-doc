@@ -52,7 +52,11 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			document: doc,
 			onStatus: ({ status }) => {
 				if (!cancelled) {
-					setConnectionStatus(mapWebSocketStatus(status));
+					const next = mapWebSocketStatus(status);
+					setConnectionStatus(next);
+					if (next === 'connected' || next === 'connecting') {
+						setError(undefined);
+					}
 				}
 			},
 			onDisconnect: ({ event }) => {

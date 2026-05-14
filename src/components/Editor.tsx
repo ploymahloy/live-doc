@@ -13,6 +13,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
 import * as Y from 'yjs';
 
+import { ConnectionStatusBar } from '@/components/ConnectionStatusBar';
 import { useCollaboration, type ConnectionStatus } from '@/hooks/useCollaboration';
 
 const COLLAB_FIELD = 'default';
@@ -34,16 +35,21 @@ const editorContentClassName = [
 
 function EditorWithYDoc({
 	ydoc,
-	connectionStatus
+	connectionStatus,
+	error
 }: {
 	ydoc: Y.Doc;
 	connectionStatus: ConnectionStatus;
+	error?: string;
 }) {
 	const [yUpdateCount, setYUpdateCount] = useState(0);
 	const [encodedStateBytes, setEncodedStateBytes] = useState(0);
 	const [prosemirrorJsonText, setProsemirrorJsonText] = useState('');
 
+	// TODO: Write a test(s) to enforce this.
+	// Offline is a sync concern only: never tie `editable` to WebSocket status.
 	const editor = useEditor({
+		editable: true,
 		immediatelyRender: false,
 		extensions: [
 			Document,
@@ -98,9 +104,9 @@ function EditorWithYDoc({
 
 	return (
 		<div className='space-y-3'>
+			<ConnectionStatusBar status={connectionStatus} error={error} />
+
 			<dl className='grid gap-1 rounded-md border border-neutral-900/10 bg-neutral-900/4 px-3 py-2 font-mono text-xs text-neutral-700 sm:grid-cols-[auto_1fr] sm:gap-x-4'>
-				<dt className='text-neutral-500'>Hocuspocus</dt>
-				<dd>{connectionStatus}</dd>
 				<dt className='text-neutral-500'>Y.Doc updates</dt>
 				<dd>{yUpdateCount}</dd>
 				<dt className='text-neutral-500'>encodeStateAsUpdate bytes</dt>
@@ -126,15 +132,12 @@ export function Editor() {
 
 	if (!ready || !ydoc) {
 		return (
-			<div className='space-y-1 text-sm text-neutral-500'>
+			<div className='space-y-3 text-sm text-neutral-500'>
+				<ConnectionStatusBar status={connectionStatus} error={error} />
 				<p>Preparing editor…</p>
-				<p className='font-mono text-xs text-neutral-600'>
-					Hocuspocus: {connectionStatus}
-					{error ? ` — ${error}` : ''}
-				</p>
 			</div>
 		);
 	}
 
-	return <EditorWithYDoc ydoc={ydoc} connectionStatus={connectionStatus} />;
+	return <EditorWithYDoc ydoc={ydoc} connectionStatus={connectionStatus} error={error} />;
 }
