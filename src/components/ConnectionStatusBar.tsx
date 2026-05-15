@@ -4,7 +4,6 @@ import type { ConnectionStatus } from '@/hooks/useCollaboration';
 
 export type ConnectionStatusBarProps = {
 	status: ConnectionStatus;
-	error?: string;
 };
 
 function statusLabel(status: ConnectionStatus): string {
@@ -34,7 +33,7 @@ function StatusDot({ status }: { status: ConnectionStatus }) {
 	}
 }
 
-export function ConnectionStatusBar({ status, error }: ConnectionStatusBarProps) {
+export function ConnectionStatusBar({ status }: ConnectionStatusBarProps) {
 	const label = statusLabel(status);
 
 	return (
@@ -47,17 +46,6 @@ export function ConnectionStatusBar({ status, error }: ConnectionStatusBarProps)
 				<StatusDot status={status} />
 				<span className='font-medium tracking-tight text-neutral-950'>{label}</span>
 			</div>
-
-			{status === 'disconnected' ?
-				<div className='mt-2 space-y-1.5'>
-					<p className='text-sm leading-snug text-neutral-700'>
-						You can keep editing. Changes stay on this device and will sync when the connection returns.
-					</p>
-					{error ?
-						<p className='break-words font-mono text-xs leading-snug text-neutral-600'>{error}</p>
-					:	null}
-				</div>
-			:	null}
 		</div>
 	);
 }

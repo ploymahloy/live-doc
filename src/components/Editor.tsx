@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import Collaboration from '@tiptap/extension-collaboration';
 import Bold from '@tiptap/extension-bold';
 import CodeBlock from '@tiptap/extension-code-block';
@@ -10,7 +9,6 @@ import Italic from '@tiptap/extension-italic';
 import Paragraph from '@tiptap/extension-paragraph';
 import Text from '@tiptap/extension-text';
 import { EditorContent, useEditor } from '@tiptap/react';
-import { yXmlFragmentToProseMirrorRootNode } from '@tiptap/y-tiptap';
 import * as Y from 'yjs';
 
 import { ConnectionStatusBar } from '@/components/ConnectionStatusBar';
@@ -33,19 +31,7 @@ const editorContentClassName = [
 	'[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-[inherit] [&_pre_code]:text-[inherit]'
 ].join(' ');
 
-function EditorWithYDoc({
-	ydoc,
-	connectionStatus,
-	error
-}: {
-	ydoc: Y.Doc;
-	connectionStatus: ConnectionStatus;
-	error?: string;
-}) {
-	const [yUpdateCount, setYUpdateCount] = useState(0);
-	const [encodedStateBytes, setEncodedStateBytes] = useState(0);
-	const [prosemirrorJsonText, setProsemirrorJsonText] = useState('');
-
+function EditorWithYDoc({ ydoc, connectionStatus }: { ydoc: Y.Doc; connectionStatus: ConnectionStatus }) {
 	// TODO: Write a test(s) to enforce this.
 	// Offline is a sync concern only: never tie `editable` to WebSocket status.
 	const editor = useEditor({
@@ -72,72 +58,29 @@ function EditorWithYDoc({
 		}
 	});
 
-	useEffect(() => {
-		if (!editor) {
-			return;
-		}
-
-		const fragment = ydoc.getXmlFragment(COLLAB_FIELD);
-
-		const onYDocUpdate = () => {
-			setYUpdateCount(n => n + 1);
-			setEncodedStateBytes(Y.encodeStateAsUpdate(ydoc).byteLength);
-			try {
-				const root = yXmlFragmentToProseMirrorRootNode(fragment, editor.schema);
-				setProsemirrorJsonText(JSON.stringify(root.toJSON(), null, 2));
-			} catch {
-				setProsemirrorJsonText('');
-			}
-		};
-
-		ydoc.on('update', onYDocUpdate);
-		onYDocUpdate();
-
-		return () => {
-			ydoc.off('update', onYDocUpdate);
-		};
-	}, [editor, ydoc]);
-
 	if (!editor) {
 		return null;
 	}
 
 	return (
 		<div className='space-y-3'>
-			<ConnectionStatusBar status={connectionStatus} error={error} />
-
-			<dl className='grid gap-1 rounded-md border border-neutral-900/10 bg-neutral-900/4 px-3 py-2 font-mono text-xs text-neutral-700 sm:grid-cols-[auto_1fr] sm:gap-x-4'>
-				<dt className='text-neutral-500'>Y.Doc updates</dt>
-				<dd>{yUpdateCount}</dd>
-				<dt className='text-neutral-500'>encodeStateAsUpdate bytes</dt>
-				<dd>{encodedStateBytes}</dd>
-			</dl>
-
+			<ConnectionStatusBar status={connectionStatus} />
 			<EditorContent className={editorContentClassName} editor={editor} />
-
-			<details className='rounded-md border border-neutral-900/10 bg-neutral-900/4'>
-				<summary className='cursor-pointer px-3 py-2 font-mono text-xs text-neutral-600'>
-					Y.XmlFragment → ProseMirror JSON (live)
-				</summary>
-				<pre className='max-h-48 overflow-auto border-t border-neutral-900/10 p-3 font-mono text-[11px] leading-relaxed text-neutral-800'>
-					{prosemirrorJsonText}
-				</pre>
-			</details>
 		</div>
 	);
 }
 
 export function Editor() {
-	const { ydoc, ready, connectionStatus, error } = useCollaboration();
+	const { ydoc, ready, connectionStatus } = useCollaboration();
 
 	if (!ready || !ydoc) {
 		return (
 			<div className='space-y-3 text-sm text-neutral-500'>
-				<ConnectionStatusBar status={connectionStatus} error={error} />
+				<ConnectionStatusBar status={connectionStatus} />
 				<p>Preparing editor…</p>
 			</div>
 		);
 	}
 
-	return <EditorWithYDoc ydoc={ydoc} connectionStatus={connectionStatus} error={error} />;
+	return <EditorWithYDoc ydoc={ydoc} connectionStatus={connectionStatus} />;
 }
