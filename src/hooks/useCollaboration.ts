@@ -59,6 +59,8 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			url: wsUrl,
 			name: documentName,
 			document: doc,
+			// @ts-expect-error Provider typings omit websocket-layer options; runtime passes them to HocuspocusProviderWebsocket.
+			maxAttempts: 1,
 			onStatus: ({ status }) => {
 				if (cancelled) {
 					return;
