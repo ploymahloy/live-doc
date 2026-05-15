@@ -12,7 +12,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import * as Y from 'yjs';
 
 import { ConnectionStatusBar } from '@/components/ConnectionStatusBar';
-import { useCollaboration, type ConnectionStatus } from '@/hooks/useCollaboration';
+import { useCollaboration } from '@/hooks/useCollaboration';
 
 const COLLAB_FIELD = 'default';
 
@@ -31,7 +31,9 @@ const editorContentClassName = [
 	'[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-[inherit] [&_pre_code]:text-[inherit]'
 ].join(' ');
 
-function EditorWithYDoc({ ydoc, connectionStatus }: { ydoc: Y.Doc; connectionStatus: ConnectionStatus }) {
+const editorPlaceholderShellClassName = 'min-h-48 rounded-md ring-1 ring-neutral-900/10 bg-neutral-900/4';
+
+function EnabledEditor({ ydoc }: { ydoc: Y.Doc }) {
 	// TODO: Write a test(s) to enforce this.
 	// Offline is a sync concern only: never tie `editable` to WebSocket status.
 	const editor = useEditor({
@@ -59,28 +61,27 @@ function EditorWithYDoc({ ydoc, connectionStatus }: { ydoc: Y.Doc; connectionSta
 	});
 
 	if (!editor) {
-		return null;
-	}
-
-	return (
-		<div className='space-y-3'>
-			<ConnectionStatusBar status={connectionStatus} />
-			<EditorContent className={editorContentClassName} editor={editor} />
-		</div>
-	);
-}
-
-export function Editor() {
-	const { ydoc, ready, connectionStatus } = useCollaboration();
-
-	if (!ready || !ydoc) {
 		return (
 			<div className='space-y-3 text-sm text-neutral-500'>
-				<ConnectionStatusBar status={connectionStatus} />
-				<p>Preparing editor…</p>
+				<p>Starting editor…</p>
+				<div className={editorPlaceholderShellClassName} aria-hidden />
 			</div>
 		);
 	}
 
-	return <EditorWithYDoc ydoc={ydoc} connectionStatus={connectionStatus} />;
+	return <EditorContent className={editorContentClassName} editor={editor} />;
+}
+
+export function Editor() {
+	const { ydoc, ready, displayConnectionStatus } = useCollaboration();
+
+	return (
+		<div className='space-y-3'>
+			<ConnectionStatusBar status={displayConnectionStatus} />
+
+			{!ready || !ydoc ?
+				<p className='text-sm text-neutral-500'>Preparing editor…</p>
+			:	<EnabledEditor ydoc={ydoc} />}
+		</div>
+	);
 }

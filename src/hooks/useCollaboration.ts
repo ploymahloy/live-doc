@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { HocuspocusProvider, WebSocketStatus } from '@hocuspocus/provider';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import * as Y from 'yjs';
@@ -17,6 +17,9 @@ export type CollaborationOptions = {
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 
+/** Delay before showing offline in the UI; absorbs Strict Mode and brief socket churn. */
+const DISCONNECT_DISPLAY_DELAY_MS = 300;
+
 function mapWebSocketStatus(status: WebSocketStatus): ConnectionStatus {
 	switch (status) {
 		case WebSocketStatus.Connected:
@@ -31,32 +34,49 @@ function mapWebSocketStatus(status: WebSocketStatus): ConnectionStatus {
 export function useCollaboration(options: CollaborationOptions = {}) {
 	const documentName = options.documentName ?? DEFAULT_COLLABORATION_DOCUMENT_NAME;
 	const indexedDbName = options.indexedDbName ?? documentName;
-	const wsUrl =
-		options.wsUrl ??
-		process.env.NEXT_PUBLIC_HOCUSPOCUS_URL ??
-		'ws://127.0.0.1:1234';
+	const wsUrl = options.wsUrl ?? process.env.NEXT_PUBLIC_HOCUSPOCUS_URL ?? 'ws://127.0.0.1:1234';
 
 	const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
 	const [ready, setReady] = useState(false);
 	const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
+	const [displayConnectionStatus, setDisplayConnectionStatus] = useState<ConnectionStatus>('connecting');
 	const [error, setError] = useState<string | undefined>();
+	const disconnectDisplayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	useEffect(() => {
 		let cancelled = false;
 		const doc = new Y.Doc();
 		const persistence = new IndexeddbPersistence(indexedDbName, doc);
 
+		const clearDisconnectDisplayTimer = () => {
+			if (disconnectDisplayTimerRef.current) {
+				clearTimeout(disconnectDisplayTimerRef.current);
+				disconnectDisplayTimerRef.current = null;
+			}
+		};
+
 		const provider = new HocuspocusProvider({
 			url: wsUrl,
 			name: documentName,
 			document: doc,
 			onStatus: ({ status }) => {
-				if (!cancelled) {
-					const next = mapWebSocketStatus(status);
-					setConnectionStatus(next);
-					if (next === 'connected' || next === 'connecting') {
-						setError(undefined);
-					}
+				if (cancelled) {
+					return;
+				}
+				const next = mapWebSocketStatus(status);
+				setConnectionStatus(next);
+				if (next === 'connected' || next === 'connecting') {
+					clearDisconnectDisplayTimer();
+					setDisplayConnectionStatus(next);
+					setError(undefined);
+				} else {
+					clearDisconnectDisplayTimer();
+					disconnectDisplayTimerRef.current = setTimeout(() => {
+						disconnectDisplayTimerRef.current = null;
+						if (!cancelled) {
+							setDisplayConnectionStatus('disconnected');
+						}
+					}, DISCONNECT_DISPLAY_DELAY_MS);
 				}
 			},
 			onDisconnect: ({ event }) => {
@@ -77,6 +97,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 
 		return () => {
 			cancelled = true;
+			clearDisconnectDisplayTimer();
 			persistence.off('synced', onIdbSynced);
 			provider.destroy();
 			void persistence.destroy();
@@ -88,5 +109,5 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 		};
 	}, [documentName, indexedDbName, wsUrl]);
 
-	return { ydoc, ready, connectionStatus, error };
+	return { ydoc, ready, connectionStatus, displayConnectionStatus, error };
 }
