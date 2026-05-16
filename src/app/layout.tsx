@@ -13,13 +13,13 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	return (
-		<html lang='en'>
+		<html lang='en' className='m-0 box-border p-0'>
 			<head>
 				<meta name='viewport' content='width=device-width, initial-scale=1.0' />
 				<title>{metadata.title as string}</title>
 				<meta name='description' content={metadata.description as string} />
 			</head>
-			<body>
+			<body className='m-0 box-border p-0'>
 				<Providers>{children}</Providers>
 			</body>
 		</html>

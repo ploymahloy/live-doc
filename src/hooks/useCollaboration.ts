@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { HocuspocusProvider, WebSocketStatus } from '@hocuspocus/provider';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import * as Y from 'yjs';
+
+import { getSessionCollaboratorIdentity } from '@/lib/collaboratorIdentity';
 
 /** IndexedDB key and default Hocuspocus room name; keep them aligned. */
 export const DEFAULT_COLLABORATION_DOCUMENT_NAME = 'live-doc';
@@ -36,7 +38,10 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 	const indexedDbName = options.indexedDbName ?? documentName;
 	const wsUrl = options.wsUrl ?? process.env.NEXT_PUBLIC_HOCUSPOCUS_URL ?? 'ws://127.0.0.1:1234';
 
+	const collaborator = useMemo(() => getSessionCollaboratorIdentity(), []);
+
 	const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
+	const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
 	const [ready, setReady] = useState(false);
 	const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting');
 	const [displayConnectionStatus, setDisplayConnectionStatus] = useState<ConnectionStatus>('connecting');
@@ -55,7 +60,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			}
 		};
 
-		const provider = new HocuspocusProvider({
+		const hp = new HocuspocusProvider({
 			url: wsUrl,
 			name: documentName,
 			document: doc,
@@ -88,6 +93,9 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			}
 		});
 
+		hp.setAwarenessField('user', collaborator);
+		setProvider(hp);
+
 		const onIdbSynced = () => {
 			if (!cancelled) {
 				setYdoc(doc);
@@ -101,7 +109,8 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			cancelled = true;
 			clearDisconnectDisplayTimer();
 			persistence.off('synced', onIdbSynced);
-			provider.destroy();
+			setProvider(null);
+			hp.destroy();
 			void persistence.destroy();
 			doc.destroy();
 			setYdoc(null);
@@ -109,7 +118,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			setConnectionStatus('disconnected');
 			setError(undefined);
 		};
-	}, [documentName, indexedDbName, wsUrl]);
+	}, [collaborator, documentName, indexedDbName, wsUrl]);
 
-	return { ydoc, ready, connectionStatus, displayConnectionStatus, error };
+	return { ydoc, provider, collaborator, ready, connectionStatus, displayConnectionStatus, error };
 }
