@@ -6,6 +6,7 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import * as Y from 'yjs';
 
 import { getSessionCollaboratorIdentity } from '@/lib/collaboratorIdentity';
+import { installAwarenessCursorThrottle } from '@/lib/throttleAwarenessCursorBroadcast';
 
 /** IndexedDB key and default Hocuspocus room name; keep them aligned. */
 export const DEFAULT_COLLABORATION_DOCUMENT_NAME = 'live-doc';
@@ -93,6 +94,10 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			}
 		});
 
+		const uninstallAwarenessCursorThrottle = hp.awareness ?
+			installAwarenessCursorThrottle(hp.awareness)
+		:	(): void => {};
+
 		hp.setAwarenessField('user', collaborator);
 		setProvider(hp);
 
@@ -110,6 +115,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			clearDisconnectDisplayTimer();
 			persistence.off('synced', onIdbSynced);
 			setProvider(null);
+			uninstallAwarenessCursorThrottle();
 			hp.destroy();
 			void persistence.destroy();
 			doc.destroy();
