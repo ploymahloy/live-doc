@@ -1,28 +1,19 @@
 import { getRandomInt } from 'trng-crypto';
+import {
+	DEFAULT_COLLABORATOR_DISPLAY_COLOR,
+	parseCollaboratorIdentityForWire,
+	parseCollaboratorIdentityFromAwareness,
+	type CollaboratorIdentity
+} from '@/lib/collaborationMetadataSchemas';
 
-export type CollaboratorIdentity = {
-	name: string;
-	color: string;
-};
-
-/** Fallback background for collaboration caret labels; keep in sync with `collaborationCaretRender`. */
-export const DEFAULT_COLLABORATOR_DISPLAY_COLOR = '#34495e';
+export type { CollaboratorIdentity };
+export { DEFAULT_COLLABORATOR_DISPLAY_COLOR };
 
 /**
  * Narrow awareness `user` payloads to CollaboratorIdentity, matching CollaborationCaret semantics.
  */
 export function collaboratorIdentityFromAwarenessUser(user: unknown): CollaboratorIdentity | null {
-	if (!user || typeof user !== 'object') {
-		return null;
-	}
-	const o = user as Record<string, unknown>;
-	const nameRaw = typeof o.name === 'string' ? o.name.trim() : '';
-	if (nameRaw.length === 0) {
-		return null;
-	}
-	const rawColor = typeof o.color === 'string' ? o.color.trim() : '';
-	const color = rawColor.length > 0 ? rawColor : DEFAULT_COLLABORATOR_DISPLAY_COLOR;
-	return { name: nameRaw, color };
+	return parseCollaboratorIdentityFromAwareness(user);
 }
 
 /** Display initials for overlapping avatars (first two meaningful word prefixes). */
@@ -207,17 +198,8 @@ export function getSessionCollaboratorIdentity(): CollaboratorIdentity {
 		if (typeof sessionStorage !== 'undefined') {
 			const existing = sessionStorage.getItem(STORAGE_KEY);
 			if (existing) {
-				const parsed = JSON.parse(existing) as unknown;
-				if (
-					parsed &&
-					typeof parsed === 'object' &&
-					'name' in parsed &&
-					'color' in parsed &&
-					typeof (parsed as CollaboratorIdentity).name === 'string' &&
-					typeof (parsed as CollaboratorIdentity).color === 'string'
-				) {
-					return parsed as CollaboratorIdentity;
-				}
+				const parsed = parseCollaboratorIdentityForWire(JSON.parse(existing) as unknown);
+				return parsed;
 			}
 			const identity = generateCollaboratorIdentity();
 			sessionStorage.setItem(STORAGE_KEY, JSON.stringify(identity));

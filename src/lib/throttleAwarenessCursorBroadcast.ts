@@ -1,4 +1,5 @@
 import type { Awareness } from 'y-protocols/awareness';
+import { parseAwarenessCursorForWire } from '@/lib/collaborationMetadataSchemas';
 
 /** Matches `cursorStateField` default in `@tiptap/y-tiptap` `yCursorPlugin`. */
 const CURSOR_FIELD = 'cursor';
@@ -11,9 +12,7 @@ const CURSOR_FIELD = 'cursor';
  */
 export function installAwarenessCursorThrottle(awareness: Awareness): () => void {
 	const scheduleFrame =
-		typeof globalThis.requestAnimationFrame === 'function' ?
-			globalThis.requestAnimationFrame.bind(globalThis)
-		:	null;
+		typeof globalThis.requestAnimationFrame === 'function' ? globalThis.requestAnimationFrame.bind(globalThis) : null;
 
 	if (!scheduleFrame || typeof globalThis.cancelAnimationFrame !== 'function') {
 		return (): void => {};
@@ -25,12 +24,20 @@ export function installAwarenessCursorThrottle(awareness: Awareness): () => void
 	let rafId: number | null = null;
 	let queuedCursor: unknown;
 
+	function broadcastCursor(value: unknown): void {
+		try {
+			originalSetLocalStateField(CURSOR_FIELD, parseAwarenessCursorForWire(value));
+		} catch {
+			// Skip malformed cursor payloads rather than broadcasting garbage.
+		}
+	}
+
 	function flushQueuedCursor(): void {
 		rafId = null;
 		const payload = queuedCursor;
 		if (payload !== undefined) {
 			queuedCursor = undefined;
-			originalSetLocalStateField(CURSOR_FIELD, payload);
+			broadcastCursor(payload);
 		}
 	}
 
@@ -47,6 +54,12 @@ export function installAwarenessCursorThrottle(awareness: Awareness): () => void
 			}
 			queuedCursor = undefined;
 			originalSetLocalStateField(field, null);
+			return;
+		}
+
+		try {
+			parseAwarenessCursorForWire(value);
+		} catch {
 			return;
 		}
 

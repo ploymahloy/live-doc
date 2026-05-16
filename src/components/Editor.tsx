@@ -16,6 +16,7 @@ import * as Y from 'yjs';
 import { DocumentActiveUsersHeader } from '@/components/DocumentActiveUsersHeader';
 import { useCollaboration } from '@/hooks/useCollaboration';
 import { useCollaborationAwarenessPeers } from '@/hooks/useCollaborationAwarenessPeers';
+import { parseCollaboratorIdentityFromAwareness } from '@/lib/collaborationMetadataSchemas';
 import { DEFAULT_COLLABORATOR_DISPLAY_COLOR, type CollaboratorIdentity } from '@/lib/collaboratorIdentity';
 import { readableTextHexOnBackground } from '@/lib/readableTextOnBackground';
 
@@ -42,11 +43,9 @@ const editorContentClassName = [
 const editorPlaceholderShellClassName = 'min-h-48 rounded-md ring-1 ring-neutral-900/10 bg-neutral-900/4';
 
 const collaborationCaretRender = (user: Record<string, unknown>) => {
-	const color =
-		typeof user.color === 'string' && user.color.trim().length > 0 ?
-			user.color
-		:	DEFAULT_COLLABORATOR_DISPLAY_COLOR;
-	const name = typeof user.name === 'string' ? user.name : '';
+	const identity = parseCollaboratorIdentityFromAwareness(user);
+	const color = identity?.color ?? DEFAULT_COLLABORATOR_DISPLAY_COLOR;
+	const name = identity?.name ?? '';
 	const textColor = readableTextHexOnBackground(color);
 
 	const cursor = document.createElement('span');

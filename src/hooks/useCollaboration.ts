@@ -5,6 +5,7 @@ import { HocuspocusProvider, WebSocketStatus } from '@hocuspocus/provider';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import * as Y from 'yjs';
 
+import { parseCollaboratorIdentityForWire } from '@/lib/collaborationMetadataSchemas';
 import { getSessionCollaboratorIdentity } from '@/lib/collaboratorIdentity';
 import { installAwarenessCursorThrottle } from '@/lib/throttleAwarenessCursorBroadcast';
 
@@ -98,7 +99,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			installAwarenessCursorThrottle(hp.awareness)
 		:	(): void => {};
 
-		hp.setAwarenessField('user', collaborator);
+		hp.setAwarenessField('user', parseCollaboratorIdentityForWire(collaborator));
 		setProvider(hp);
 
 		const onIdbSynced = () => {
