@@ -5,6 +5,38 @@ export type CollaboratorIdentity = {
 	color: string;
 };
 
+/** Fallback background for collaboration caret labels; keep in sync with `collaborationCaretRender`. */
+export const DEFAULT_COLLABORATOR_DISPLAY_COLOR = '#34495e';
+
+/**
+ * Narrow awareness `user` payloads to CollaboratorIdentity, matching CollaborationCaret semantics.
+ */
+export function collaboratorIdentityFromAwarenessUser(user: unknown): CollaboratorIdentity | null {
+	if (!user || typeof user !== 'object') {
+		return null;
+	}
+	const o = user as Record<string, unknown>;
+	const nameRaw = typeof o.name === 'string' ? o.name.trim() : '';
+	if (nameRaw.length === 0) {
+		return null;
+	}
+	const rawColor = typeof o.color === 'string' ? o.color.trim() : '';
+	const color = rawColor.length > 0 ? rawColor : DEFAULT_COLLABORATOR_DISPLAY_COLOR;
+	return { name: nameRaw, color };
+}
+
+/** Display initials for overlapping avatars (first two meaningful word prefixes). */
+export function collaboratorInitials(name: string): string {
+	const parts = name.split(/[\s-]+/).filter(Boolean);
+	if (parts.length === 0) {
+		return '?';
+	}
+	if (parts.length === 1) {
+		return parts[0]!.slice(0, Math.min(2, parts[0]!.length)).toUpperCase();
+	}
+	return (parts[0]!.charAt(0) + parts[1]!.charAt(0)).toUpperCase();
+}
+
 const STORAGE_KEY = 'live-doc-collaborator-identity';
 
 const ANIMALS = [

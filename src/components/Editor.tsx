@@ -13,9 +13,10 @@ import Text from '@tiptap/extension-text';
 import { EditorContent, useEditor } from '@tiptap/react';
 import * as Y from 'yjs';
 
-import { ConnectionStatusBar } from '@/components/ConnectionStatusBar';
+import { DocumentActiveUsersHeader } from '@/components/DocumentActiveUsersHeader';
 import { useCollaboration } from '@/hooks/useCollaboration';
-import type { CollaboratorIdentity } from '@/lib/collaboratorIdentity';
+import { useCollaborationAwarenessPeers } from '@/hooks/useCollaborationAwarenessPeers';
+import { DEFAULT_COLLABORATOR_DISPLAY_COLOR, type CollaboratorIdentity } from '@/lib/collaboratorIdentity';
 import { readableTextHexOnBackground } from '@/lib/readableTextOnBackground';
 
 const COLLAB_FIELD = 'default';
@@ -41,7 +42,10 @@ const editorContentClassName = [
 const editorPlaceholderShellClassName = 'min-h-48 rounded-md ring-1 ring-neutral-900/10 bg-neutral-900/4';
 
 const collaborationCaretRender = (user: Record<string, unknown>) => {
-	const color = typeof user.color === 'string' && user.color.trim().length > 0 ? user.color : '#34495e';
+	const color =
+		typeof user.color === 'string' && user.color.trim().length > 0 ?
+			user.color
+		:	DEFAULT_COLLABORATOR_DISPLAY_COLOR;
 	const name = typeof user.name === 'string' ? user.name : '';
 	const textColor = readableTextHexOnBackground(color);
 
@@ -112,10 +116,11 @@ function EnabledEditor({
 
 export function Editor() {
 	const { ydoc, provider, collaborator, ready, displayConnectionStatus } = useCollaboration();
+	const awarenessPeers = useCollaborationAwarenessPeers(provider);
 
 	return (
 		<div className='space-y-3'>
-			<ConnectionStatusBar status={displayConnectionStatus} />
+			<DocumentActiveUsersHeader peers={awarenessPeers} status={displayConnectionStatus} />
 
 			{!ready || !ydoc || !provider ?
 				<p className='text-sm text-neutral-500'>Preparing editor…</p>
