@@ -17,6 +17,8 @@ export type CollaborationOptions = {
 	/** Defaults to `documentName` so local cache matches the synced room. */
 	indexedDbName?: string;
 	wsUrl?: string;
+	/** Bump to tear down and recreate Y.Doc, IndexedDB persistence, and Hocuspocus provider. */
+	sessionKey?: number;
 };
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
@@ -39,6 +41,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 	const documentName = options.documentName ?? DEFAULT_COLLABORATION_DOCUMENT_NAME;
 	const indexedDbName = options.indexedDbName ?? documentName;
 	const wsUrl = options.wsUrl ?? process.env.NEXT_PUBLIC_HOCUSPOCUS_URL ?? 'ws://127.0.0.1:1234';
+	const sessionKey = options.sessionKey ?? 0;
 
 	const collaborator = useMemo(() => getSessionCollaboratorIdentity(), []);
 
@@ -125,7 +128,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			setConnectionStatus('disconnected');
 			setError(undefined);
 		};
-	}, [collaborator, documentName, indexedDbName, wsUrl]);
+	}, [collaborator, documentName, indexedDbName, sessionKey, wsUrl]);
 
 	return { ydoc, provider, collaborator, ready, connectionStatus, displayConnectionStatus, error };
 }

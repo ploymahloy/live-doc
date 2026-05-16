@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
@@ -14,6 +15,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import * as Y from 'yjs';
 
 import { DocumentActiveUsersHeader } from '@/components/DocumentActiveUsersHeader';
+import { EditorErrorBoundary } from '@/components/EditorErrorBoundary';
 import { useCollaboration } from '@/hooks/useCollaboration';
 import { useCollaborationAwarenessPeers } from '@/hooks/useCollaborationAwarenessPeers';
 import { parseCollaboratorIdentityFromAwareness } from '@/lib/collaborationMetadataSchemas';
@@ -114,16 +116,27 @@ function EnabledEditor({
 }
 
 export function Editor() {
-	const { ydoc, provider, collaborator, ready, displayConnectionStatus } = useCollaboration();
+	const [sessionKey, setSessionKey] = useState(0);
+	const { ydoc, provider, collaborator, ready, displayConnectionStatus } = useCollaboration({ sessionKey });
 	const awarenessPeers = useCollaborationAwarenessPeers(provider);
+
+	const handleEditorReset = () => setSessionKey((k) => k + 1);
 
 	return (
 		<div className='space-y-3'>
 			<DocumentActiveUsersHeader peers={awarenessPeers} status={displayConnectionStatus} />
 
-			{!ready || !ydoc || !provider ?
-				<p className='text-sm text-neutral-500'>Preparing editor…</p>
-			:	<EnabledEditor ydoc={ydoc} provider={provider} collaborator={collaborator} />}
+			<EditorErrorBoundary onReset={handleEditorReset}>
+				{!ready || !ydoc || !provider ?
+					<p className='text-sm text-neutral-500'>Preparing editor…</p>
+				:	<EnabledEditor
+						key={sessionKey}
+						ydoc={ydoc}
+						provider={provider}
+						collaborator={collaborator}
+					/>
+				}
+			</EditorErrorBoundary>
 		</div>
 	);
 }
