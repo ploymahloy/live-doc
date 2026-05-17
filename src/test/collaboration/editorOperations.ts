@@ -140,6 +140,13 @@ export const editorOperationsArbitrary: fc.Arbitrary<EditorOperation[]> = fc
 	.integer({ min: 50, max: 200 })
 	.chain(count => fc.gen().map(gen => generateOperations(gen, count)));
 
+export const editorOperationsCountArbitrary = (count: number): fc.Arbitrary<EditorOperation[]> =>
+	fc.gen().map(gen => generateOperations(gen, count));
+
+export function sampleEditorOperations(count: number, seed: number): EditorOperation[] {
+	return fc.sample(editorOperationsCountArbitrary(count), { seed, numRuns: 1 })[0] ?? [];
+}
+
 export const taggedEditorOperationsArbitrary: fc.Arbitrary<TaggedEditorOperation[]> = editorOperationsArbitrary.chain(
 	ops =>
 		fc.gen().map(gen =>
