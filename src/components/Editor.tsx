@@ -2,31 +2,17 @@
 
 import { useState } from 'react';
 import { HocuspocusProvider } from '@hocuspocus/provider';
-import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
-import Bold from '@tiptap/extension-bold';
-import CodeBlock from '@tiptap/extension-code-block';
-import Document from '@tiptap/extension-document';
-import Heading from '@tiptap/extension-heading';
-import Italic from '@tiptap/extension-italic';
-import Paragraph from '@tiptap/extension-paragraph';
-import Text from '@tiptap/extension-text';
 import { EditorContent, useEditor } from '@tiptap/react';
-import * as Y from 'yjs';
 
 import { DocumentActiveUsersHeader } from '@/components/DocumentActiveUsersHeader';
 import { EditorErrorBoundary } from '@/components/EditorErrorBoundary';
 import { useCollaboration } from '@/hooks/useCollaboration';
 import { useCollaborationAwarenessPeers } from '@/hooks/useCollaborationAwarenessPeers';
+import { getCollaborationEditorExtensions, seedCollaborationFragmentIfEmpty } from '@/lib/collaborationEditor';
 import { parseCollaboratorIdentityFromAwareness } from '@/lib/collaborationMetadataSchemas';
 import { DEFAULT_COLLABORATOR_DISPLAY_COLOR, type CollaboratorIdentity } from '@/lib/collaboratorIdentity';
 import { readableTextHexOnBackground } from '@/lib/readableTextOnBackground';
-
-const COLLAB_FIELD = 'default';
-
-const initialContent = `<h1>Live doc</h1>
-<p>This editor uses <strong>bold</strong>, <em>italic</em>, headings, and code blocks.</p>
-<pre><code>npm install @tiptap/react</code></pre>`;
 
 const editorContentClassName = [
 	'tiptap',
@@ -68,7 +54,7 @@ function EnabledEditor({
 	provider,
 	collaborator
 }: {
-	ydoc: Y.Doc;
+	ydoc: import('yjs').Doc;
 	provider: HocuspocusProvider;
 	collaborator: CollaboratorIdentity;
 }) {
@@ -78,28 +64,17 @@ function EnabledEditor({
 		editable: true,
 		immediatelyRender: false,
 		extensions: [
-			Document,
-			Paragraph,
-			Text,
-			Bold,
-			Italic,
-			Heading.configure({ levels: [1, 2, 3] }),
-			CodeBlock,
-			Collaboration.configure({
-				document: ydoc,
-				field: COLLAB_FIELD
-			}),
+			...getCollaborationEditorExtensions(ydoc),
 			CollaborationCaret.configure({
 				provider,
 				user: collaborator,
 				render: collaborationCaretRender
 			})
 		],
-		onCreate: ({ editor }) => {
-			const fragment = ydoc.getXmlFragment(COLLAB_FIELD);
-			if (fragment.length === 0) {
-				editor.commands.setContent(initialContent);
-			}
+		onCreate: ({ editor: createdEditor }) => {
+			seedCollaborationFragmentIfEmpty(ydoc, html => {
+				createdEditor.commands.setContent(html);
+			});
 		}
 	});
 
@@ -120,7 +95,7 @@ export function Editor() {
 	const { ydoc, provider, collaborator, ready, displayConnectionStatus } = useCollaboration({ sessionKey });
 	const awarenessPeers = useCollaborationAwarenessPeers(provider);
 
-	const handleEditorReset = () => setSessionKey((k) => k + 1);
+	const handleEditorReset = () => setSessionKey(k => k + 1);
 
 	return (
 		<div className='space-y-3'>
@@ -129,13 +104,7 @@ export function Editor() {
 			<EditorErrorBoundary onReset={handleEditorReset}>
 				{!ready || !ydoc || !provider ?
 					<p className='text-sm text-neutral-500'>Preparing editor…</p>
-				:	<EnabledEditor
-						key={sessionKey}
-						ydoc={ydoc}
-						provider={provider}
-						collaborator={collaborator}
-					/>
-				}
+				:	<EnabledEditor key={sessionKey} ydoc={ydoc} provider={provider} collaborator={collaborator} />}
 			</EditorErrorBoundary>
 		</div>
 	);
