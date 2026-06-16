@@ -1,5 +1,6 @@
 'use client';
 
+import { Check, Share2 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { btnSecondary } from '@/lib/ui';
@@ -40,9 +41,11 @@ export function ShareDocumentButton({ documentId }: ShareDocumentButtonProps) {
 			<button
 				type='button'
 				onClick={handleCopy}
-				className={btnSecondary}
+				className={`${btnSecondary} box-border h-10 w-10 p-0 sm:h-9 sm:w-auto sm:px-3`}
 				aria-label={copied ? 'Link copied' : 'Copy share link'}>
-				{copied ? 'Copied!' : 'Share'}
+				{copied ?
+					<Check aria-hidden className='h-5 w-5 shrink-0 sm:h-4 sm:w-4' />
+				:	<Share2 aria-hidden className='h-5 w-5 shrink-0 sm:h-4 sm:w-4' />}
 			</button>
 			<span className='sr-only' aria-live='polite'>
 				{copied ? 'Share link copied to clipboard' : ''}

@@ -38,10 +38,10 @@ export function CollaboratorAvatarStack({
 				const textColor = readableTextHexOnBackground(peer.color);
 				const isCurrentUser = currentUser ? isSameIdentity(peer, currentUser) : false;
 				const avatarClassName = [
-					'inline-flex size-8 select-none items-center justify-center rounded-full',
-					'ring-2 text-[0.65rem] font-semibold tracking-wide shadow-sm',
+					'inline-flex size-7 select-none items-center justify-center rounded-full sm:size-8',
+					'ring-2 text-[0.6rem] font-semibold tracking-wide shadow-sm sm:text-[0.65rem]',
 					isCurrentUser ? 'ring-neutral-950 ring-offset-1' : 'ring-white',
-					!isCurrentUser || !onUpdateProfile ? '-ml-2 first:ml-0' : ''
+					!isCurrentUser || !onUpdateProfile ? '-ml-1.5 first:ml-0 sm:-ml-2' : ''
 				]
 					.filter(Boolean)
 					.join(' ');
@@ -50,7 +50,7 @@ export function CollaboratorAvatarStack({
 					return (
 						<ProfilePopover
 							key={`${peer.name}\0${peer.color}\0${index}`}
-							className='-ml-2 first:ml-0'
+							className='-ml-1.5 first:ml-0 sm:-ml-2'
 							identity={currentUser}
 							onSave={onUpdateProfile}>
 							{triggerProps => (
@@ -94,8 +94,8 @@ export function CollaboratorAvatarStack({
 					role='listitem'
 					title={`${overflow} additional collaborators`}
 					className={[
-						'-ml-2',
-						'inline-flex size-8 select-none items-center justify-center rounded-full',
+						'-ml-1.5 sm:-ml-2',
+						'inline-flex size-7 select-none items-center justify-center rounded-full sm:size-8',
 						'bg-neutral-200 text-neutral-950 ring-2 ring-white shadow-sm',
 						'text-xs font-semibold tabular-nums'
 					].join(' ')}

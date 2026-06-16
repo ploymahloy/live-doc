@@ -28,7 +28,7 @@ export default async function DocPage({ params }: DocPageProps) {
 	}
 
 	return (
-		<main className='mx-auto min-h-screen max-w-3xl px-4 py-6 sm:px-6 sm:py-8'>
+		<main className='mx-auto min-h-screen max-w-3xl px-3 py-6 sm:px-6 sm:py-8'>
 			<Editor documentId={id} />
 		</main>
 	);

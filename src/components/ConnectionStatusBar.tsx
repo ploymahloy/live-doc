@@ -1,7 +1,6 @@
 'use client';
 
 import type { ConnectionStatus } from '@/hooks/useCollaboration';
-import { surface } from '@/lib/ui';
 
 export type ConnectionStatusBarProps = {
 	status: ConnectionStatus;
@@ -42,10 +41,10 @@ export function ConnectionStatusBar({ status }: ConnectionStatusBarProps) {
 			role='status'
 			aria-live='polite'
 			aria-label={label}
-			className={`${surface} px-3 py-2 text-sm text-neutral-800`}>
+			className='flex h-10 items-center px-0 text-sm text-neutral-800 sm:h-9 sm:rounded-md sm:border sm:border-neutral-900/10 sm:bg-neutral-900/4 sm:px-3'>
 			<div className='flex items-center gap-2.5'>
 				<StatusDot status={status} />
-				<span className='font-medium tracking-tight text-neutral-950'>{label}</span>
+				<span className='hidden font-medium tracking-tight text-neutral-950 sm:inline'>{label}</span>
 			</div>
 		</div>
 	);

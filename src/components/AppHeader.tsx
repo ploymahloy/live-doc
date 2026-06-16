@@ -27,20 +27,19 @@ export function AppHeader({
 	shortcutsTrigger
 }: AppHeaderProps) {
 	return (
-		<header className='flex flex-wrap items-center justify-between gap-4 gap-y-3'>
-			<div className='flex min-w-0 shrink items-center gap-4'>
-				<Link
-					href='/'
-					className='text-base font-semibold tracking-tight text-neutral-950 hover:text-neutral-700'>
-					Live Doc
-				</Link>
-				<ConnectionStatusBar status={status} />
-			</div>
-			<div className='flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2.5'>
-				<ShareDocumentButton documentId={documentId} />
-				{shortcutsTrigger}
-				<span className='hidden text-sm font-medium tracking-tight text-neutral-600 sm:inline'>Online</span>
-				<CollaboratorAvatarStack peers={peers} currentUser={currentUser} onUpdateProfile={onUpdateProfile} />
+		<header className='flex min-w-0 flex-col gap-2'>
+			<div className='flex min-w-0 items-center justify-between gap-2 sm:gap-3'>
+				<div className='flex min-w-0 items-center gap-2 sm:gap-3'>
+					<Link href='/' className='text-base font-semibold tracking-tight text-neutral-950 hover:text-neutral-700 sm:text-lg'>
+						Live Doc
+					</Link>
+					<ConnectionStatusBar status={status} />
+				</div>
+				<div className='flex min-w-0 flex-wrap items-center justify-end gap-2.5'>
+					<ShareDocumentButton documentId={documentId} />
+					{shortcutsTrigger}
+					<CollaboratorAvatarStack peers={peers} currentUser={currentUser} onUpdateProfile={onUpdateProfile} />
+				</div>
 			</div>
 		</header>
 	);

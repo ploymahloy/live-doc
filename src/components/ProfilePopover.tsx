@@ -95,7 +95,7 @@ export function ProfilePopover({ identity, onSave, className, children }: Profil
 					id={popoverId}
 					role='dialog'
 					aria-label='Edit profile'
-					className='absolute top-full right-0 z-40 mt-2 w-72 rounded-md border border-neutral-900/10 bg-white p-4 shadow-lg'>
+					className='absolute top-full right-0 z-40 mt-2 w-72 max-w-[calc(100vw-2rem)] rounded-md border border-neutral-900/10 bg-white p-4 shadow-lg'>
 					<div className='space-y-4'>
 						<div className='space-y-1'>
 							<label htmlFor={`${popoverId}-name`} className='text-xs font-medium text-neutral-600'>
