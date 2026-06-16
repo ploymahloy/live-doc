@@ -1,14 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
 import { EditorContent, useEditor } from '@tiptap/react';
 
 import { DocumentActiveUsersHeader } from '@/components/DocumentActiveUsersHeader';
 import { EditorErrorBoundary } from '@/components/EditorErrorBoundary';
+import { KeyboardShortcutsButton } from '@/components/KeyboardShortcutsButton';
+import { KeyboardShortcutsDialog } from '@/components/KeyboardShortcutsDialog';
 import { useCollaboration } from '@/hooks/useCollaboration';
 import { useCollaborationAwarenessPeers } from '@/hooks/useCollaborationAwarenessPeers';
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { getCollaborationEditorExtensions, seedCollaborationFragmentIfEmpty } from '@/lib/collaborationEditor';
 import { parseCollaboratorIdentityFromAwareness } from '@/lib/collaborationMetadataSchemas';
 import { DEFAULT_COLLABORATOR_DISPLAY_COLOR, type CollaboratorIdentity } from '@/lib/collaboratorIdentity';
@@ -92,20 +95,36 @@ function EnabledEditor({
 
 export function Editor() {
 	const [sessionKey, setSessionKey] = useState(0);
+	const [shortcutsOpen, setShortcutsOpen] = useState(false);
 	const { ydoc, provider, collaborator, ready, displayConnectionStatus } = useCollaboration({ sessionKey });
 	const awarenessPeers = useCollaborationAwarenessPeers(provider);
 
 	const handleEditorReset = () => setSessionKey(k => k + 1);
+	const handleOpenShortcuts = useCallback(() => setShortcutsOpen(true), []);
+	const handleCloseShortcuts = useCallback(() => setShortcutsOpen(false), []);
+
+	useKeyboardShortcut({
+		key: 'k',
+		metaOrCtrl: true,
+		onTrigger: handleOpenShortcuts,
+		enabled: !shortcutsOpen
+	});
 
 	return (
 		<div className='space-y-3'>
-			<DocumentActiveUsersHeader peers={awarenessPeers} status={displayConnectionStatus} />
+			<DocumentActiveUsersHeader
+				peers={awarenessPeers}
+				status={displayConnectionStatus}
+				shortcutsTrigger={<KeyboardShortcutsButton onClick={handleOpenShortcuts} />}
+			/>
 
 			<EditorErrorBoundary onReset={handleEditorReset}>
 				{!ready || !ydoc || !provider ?
 					<p className='text-sm text-neutral-500'>Preparing editor…</p>
 				:	<EnabledEditor key={sessionKey} ydoc={ydoc} provider={provider} collaborator={collaborator} />}
 			</EditorErrorBoundary>
+
+			<KeyboardShortcutsDialog open={shortcutsOpen} onClose={handleCloseShortcuts} />
 		</div>
 	);
 }
