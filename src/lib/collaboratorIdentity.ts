@@ -123,7 +123,7 @@ const ANIMALS = [
 	'wren'
 ] as const;
 
-const COLOR_PALETTE = [
+export const COLOR_PALETTE = [
 	'#e74c3c',
 	'#2980b9',
 	'#27ae60',
@@ -209,4 +209,15 @@ export function getSessionCollaboratorIdentity(): CollaboratorIdentity {
 		// fall through to ephemeral identity
 	}
 	return generateCollaboratorIdentity();
+}
+
+export function setSessionCollaboratorIdentity(identity: CollaboratorIdentity): void {
+	try {
+		if (typeof sessionStorage !== 'undefined') {
+			const wire = parseCollaboratorIdentityForWire(identity);
+			sessionStorage.setItem(STORAGE_KEY, JSON.stringify(wire));
+		}
+	} catch {
+		// ignore storage failures
+	}
 }

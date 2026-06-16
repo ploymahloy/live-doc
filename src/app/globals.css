@@ -1,1 +1,16 @@
 @import 'tailwindcss';
+
+@theme {
+	--font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+	--color-surface: color-mix(in oklab, var(--color-neutral-950) 4%, transparent);
+	--color-surface-elevated: #ffffff;
+	--color-border-subtle: color-mix(in oklab, var(--color-neutral-950) 10%, transparent);
+	--color-accent: var(--color-neutral-950);
+	--color-accent-muted: var(--color-neutral-600);
+}
+
+body {
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}

@@ -1,9 +1,5 @@
-import { Editor } from '@/components/Editor';
+import { LandingPage } from '@/components/LandingPage';
 
 export default function Home() {
-	return (
-		<main className='mx-auto max-w-3xl p-6'>
-			<Editor />
-		</main>
-	);
+	return <LandingPage />;
 }

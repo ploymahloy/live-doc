@@ -6,12 +6,19 @@ import { readableTextHexOnBackground } from '@/lib/readableTextOnBackground';
 
 export type CollaboratorAvatarStackProps = {
 	peers: CollaboratorIdentity[];
+	/** Highlights the current user's avatar with a ring. */
+	currentUser?: CollaboratorIdentity;
 	/** Max overlapping avatars before showing a trailing +N badge. Default 8. */
 	maxVisible?: number;
 };
 
+function isSameIdentity(a: CollaboratorIdentity, b: CollaboratorIdentity): boolean {
+	return a.name === b.name && a.color === b.color;
+}
+
 export function CollaboratorAvatarStack({
 	peers,
+	currentUser,
 	maxVisible = 8
 }: CollaboratorAvatarStackProps) {
 	const overflow = peers.length > maxVisible ? peers.length - maxVisible : 0;
@@ -26,6 +33,7 @@ export function CollaboratorAvatarStack({
 			{visiblePeers.map((peer, index) => {
 				const initials = collaboratorInitials(peer.name);
 				const textColor = readableTextHexOnBackground(peer.color);
+				const isCurrentUser = currentUser ? isSameIdentity(peer, currentUser) : false;
 
 				return (
 					<span
@@ -37,12 +45,12 @@ export function CollaboratorAvatarStack({
 							color: textColor,
 							zIndex: index + 1
 						}}
-						aria-label={peer.name}
+						aria-label={isCurrentUser ? `${peer.name} (you)` : peer.name}
 						className={[
 							'-ml-2 first:ml-0',
 							'inline-flex size-8 select-none items-center justify-center rounded-full',
-							'ring-2 ring-white text-[0.65rem] font-semibold tracking-wide',
-							'shadow-sm'
+							'ring-2 text-[0.65rem] font-semibold tracking-wide shadow-sm',
+							isCurrentUser ? 'ring-neutral-950 ring-offset-1' : 'ring-white'
 						].join(' ')}>
 						<span aria-hidden>{initials}</span>
 					</span>

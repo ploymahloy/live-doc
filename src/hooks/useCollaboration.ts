@@ -1,12 +1,16 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { HocuspocusProvider, WebSocketStatus } from '@hocuspocus/provider';
 import { IndexeddbPersistence } from 'y-indexeddb';
 import * as Y from 'yjs';
 
 import { parseCollaboratorIdentityForWire } from '@/lib/collaborationMetadataSchemas';
-import { getSessionCollaboratorIdentity } from '@/lib/collaboratorIdentity';
+import {
+	getSessionCollaboratorIdentity,
+	setSessionCollaboratorIdentity,
+	type CollaboratorIdentity
+} from '@/lib/collaboratorIdentity';
 import { installAwarenessCursorThrottle } from '@/lib/throttleAwarenessCursorBroadcast';
 
 /** IndexedDB key and default Hocuspocus room name; keep them aligned. */
@@ -43,8 +47,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 	const wsUrl = options.wsUrl ?? process.env.NEXT_PUBLIC_HOCUSPOCUS_URL ?? 'ws://127.0.0.1:1234';
 	const sessionKey = options.sessionKey ?? 0;
 
-	const collaborator = useMemo(() => getSessionCollaboratorIdentity(), []);
-
+	const [collaborator, setCollaborator] = useState<CollaboratorIdentity>(() => getSessionCollaboratorIdentity());
 	const [ydoc, setYdoc] = useState<Y.Doc | null>(null);
 	const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
 	const [ready, setReady] = useState(false);
@@ -52,6 +55,14 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 	const [displayConnectionStatus, setDisplayConnectionStatus] = useState<ConnectionStatus>('connecting');
 	const [error, setError] = useState<string | undefined>();
 	const disconnectDisplayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const providerRef = useRef<HocuspocusProvider | null>(null);
+
+	const updateCollaborator = useCallback((identity: CollaboratorIdentity) => {
+		const wire = parseCollaboratorIdentityForWire(identity);
+		setSessionCollaboratorIdentity(wire);
+		setCollaborator(wire);
+		providerRef.current?.setAwarenessField('user', wire);
+	}, []);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -103,6 +114,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 		:	(): void => {};
 
 		hp.setAwarenessField('user', parseCollaboratorIdentityForWire(collaborator));
+		providerRef.current = hp;
 		setProvider(hp);
 
 		const onIdbSynced = () => {
@@ -118,6 +130,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			cancelled = true;
 			clearDisconnectDisplayTimer();
 			persistence.off('synced', onIdbSynced);
+			providerRef.current = null;
 			setProvider(null);
 			uninstallAwarenessCursorThrottle();
 			hp.destroy();
@@ -128,7 +141,18 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			setConnectionStatus('disconnected');
 			setError(undefined);
 		};
-	}, [collaborator, documentName, indexedDbName, sessionKey, wsUrl]);
+		// collaborator is read once at provider setup; updates go through updateCollaborator.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [documentName, indexedDbName, sessionKey, wsUrl]);
 
-	return { ydoc, provider, collaborator, ready, connectionStatus, displayConnectionStatus, error };
+	return {
+		ydoc,
+		provider,
+		collaborator,
+		updateCollaborator,
+		ready,
+		connectionStatus,
+		displayConnectionStatus,
+		error
+	};
 }

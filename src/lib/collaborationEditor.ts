@@ -11,9 +11,7 @@ import * as Y from 'yjs';
 
 export const COLLAB_FIELD = 'default';
 
-export const INITIAL_COLLABORATION_HTML = `<h1>Live doc</h1>
-<p>This editor uses <strong>bold</strong>, <em>italic</em>, headings, and code blocks.</p>
-<pre><code>npm install @tiptap/react</code></pre>`;
+export const INITIAL_COLLABORATION_HTML = '<p></p>';
 
 export function getCollaborationEditorExtensions(ydoc: Y.Doc): Extensions {
 	return [

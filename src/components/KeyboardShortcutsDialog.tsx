@@ -10,6 +10,7 @@ import {
 	type ShortcutCategory,
 	type ShortcutDef
 } from '@/lib/keyboardShortcuts';
+import { btnSecondary } from '@/lib/ui';
 
 type KeyboardShortcutsDialogProps = {
 	open: boolean;
@@ -17,6 +18,9 @@ type KeyboardShortcutsDialogProps = {
 };
 
 const CATEGORY_ORDER: ShortcutCategory[] = ['app', 'formatting'];
+
+const FOCUSABLE_SELECTOR =
+	'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 function groupShortcutsByCategory(shortcuts: ShortcutDef[]): Record<ShortcutCategory, ShortcutDef[]> {
 	return shortcuts.reduce(
@@ -28,9 +32,16 @@ function groupShortcutsByCategory(shortcuts: ShortcutDef[]): Record<ShortcutCate
 	);
 }
 
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+	return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter(
+		el => !el.hasAttribute('disabled') && el.tabIndex !== -1
+	);
+}
+
 export function KeyboardShortcutsDialog({ open, onClose }: KeyboardShortcutsDialogProps) {
 	const titleId = useId();
 	const closeButtonRef = useRef<HTMLButtonElement>(null);
+	const panelRef = useRef<HTMLDivElement>(null);
 	const isMac = isMacPlatform();
 	const groupedShortcuts = groupShortcutsByCategory(KEYBOARD_SHORTCUTS);
 
@@ -39,17 +50,43 @@ export function KeyboardShortcutsDialog({ open, onClose }: KeyboardShortcutsDial
 			return;
 		}
 
+		const previousOverflow = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
 		closeButtonRef.current?.focus();
 
 		const handleKeyDown = (event: KeyboardEvent) => {
 			if (event.key === 'Escape') {
 				event.preventDefault();
 				onClose();
+				return;
+			}
+
+			if (event.key !== 'Tab' || !panelRef.current) {
+				return;
+			}
+
+			const focusable = getFocusableElements(panelRef.current);
+			if (focusable.length === 0) {
+				return;
+			}
+
+			const first = focusable[0]!;
+			const last = focusable[focusable.length - 1]!;
+
+			if (event.shiftKey && document.activeElement === first) {
+				event.preventDefault();
+				last.focus();
+			} else if (!event.shiftKey && document.activeElement === last) {
+				event.preventDefault();
+				first.focus();
 			}
 		};
 
 		window.addEventListener('keydown', handleKeyDown);
-		return () => window.removeEventListener('keydown', handleKeyDown);
+		return () => {
+			document.body.style.overflow = previousOverflow;
+			window.removeEventListener('keydown', handleKeyDown);
+		};
 	}, [open, onClose]);
 
 	if (!open) {
@@ -60,15 +97,16 @@ export function KeyboardShortcutsDialog({ open, onClose }: KeyboardShortcutsDial
 		<div className='fixed inset-0 z-50 flex items-center justify-center p-4'>
 			<button
 				type='button'
-				className='absolute inset-0 bg-neutral-900/20'
+				className='absolute inset-0 bg-neutral-900/20 transition-opacity duration-200'
 				aria-label='Close keyboard shortcuts'
 				onClick={onClose}
 			/>
 			<div
+				ref={panelRef}
 				role='dialog'
 				aria-modal='true'
 				aria-labelledby={titleId}
-				className='relative z-10 w-full max-w-md rounded-md border border-neutral-900/10 bg-white p-5 shadow-lg'>
+				className='relative z-10 w-full max-w-md scale-100 rounded-md border border-neutral-900/10 bg-white p-5 opacity-100 shadow-lg transition-all duration-200'>
 				<div className='mb-4 flex items-start justify-between gap-4'>
 					<h2 id={titleId} className='text-base font-semibold tracking-tight text-neutral-950'>
 						Keyboard shortcuts
@@ -77,7 +115,7 @@ export function KeyboardShortcutsDialog({ open, onClose }: KeyboardShortcutsDial
 						ref={closeButtonRef}
 						type='button'
 						onClick={onClose}
-						className='rounded-md border border-neutral-900/10 bg-neutral-900/4 px-2 py-1 text-sm font-medium text-neutral-950 hover:bg-neutral-900/8'
+						className={btnSecondary}
 						aria-label='Close'>
 						×
 					</button>

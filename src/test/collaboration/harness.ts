@@ -3,11 +3,11 @@ import { Random } from 'fast-check';
 import { xorshift128plus } from 'pure-rand/generator/xorshift128plus';
 import * as Y from 'yjs';
 
-import {
-	getCollaborationEditorExtensions,
-	INITIAL_COLLABORATION_HTML,
-	seedCollaborationFragmentIfEmpty
-} from '@/lib/collaborationEditor';
+import { getCollaborationEditorExtensions } from '@/lib/collaborationEditor';
+
+const TEST_COLLABORATION_HTML = `<h1>Live doc</h1>
+<p>This editor uses <strong>bold</strong>, <em>italic</em>, headings, and code blocks.</p>
+<pre><code>npm install @tiptap/react</code></pre>`;
 
 export type DocumentSnapshot = {
 	stateUpdate: Uint8Array;
@@ -24,11 +24,11 @@ export function getCollaborationBaseState(): Uint8Array {
 	const ydoc = new Y.Doc();
 	const editor = new Editor({
 		extensions: getCollaborationEditorExtensions(ydoc),
-		content: INITIAL_COLLABORATION_HTML
+		content: TEST_COLLABORATION_HTML
 	});
-	seedCollaborationFragmentIfEmpty(ydoc, html => {
-		editor.commands.setContent(html);
-	});
+	if (ydoc.getXmlFragment('default').length === 0) {
+		editor.commands.setContent(TEST_COLLABORATION_HTML);
+	}
 	editor.destroy();
 	cachedBaseState = Y.encodeStateAsUpdate(ydoc);
 	ydoc.destroy();
@@ -38,12 +38,12 @@ export function getCollaborationBaseState(): Uint8Array {
 export function createCollaborationEditor(ydoc: Y.Doc): Editor {
 	const editor = new Editor({
 		extensions: getCollaborationEditorExtensions(ydoc),
-		content: INITIAL_COLLABORATION_HTML
+		content: TEST_COLLABORATION_HTML
 	});
 
-	seedCollaborationFragmentIfEmpty(ydoc, html => {
-		editor.commands.setContent(html);
-	});
+	if (ydoc.getXmlFragment('default').length === 0) {
+		editor.commands.setContent(TEST_COLLABORATION_HTML);
+	}
 
 	return editor;
 }

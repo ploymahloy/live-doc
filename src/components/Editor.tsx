@@ -3,12 +3,17 @@
 import { useCallback, useState } from 'react';
 import { HocuspocusProvider } from '@hocuspocus/provider';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
+import Placeholder from '@tiptap/extension-placeholder';
 import { EditorContent, useEditor } from '@tiptap/react';
 
-import { DocumentActiveUsersHeader } from '@/components/DocumentActiveUsersHeader';
+import { AppHeader } from '@/components/AppHeader';
+import { ConnectionErrorBanner } from '@/components/ConnectionErrorBanner';
 import { EditorErrorBoundary } from '@/components/EditorErrorBoundary';
+import { EditorLoadingSkeleton } from '@/components/EditorLoadingSkeleton';
+import { EditorToolbar } from '@/components/EditorToolbar';
 import { KeyboardShortcutsButton } from '@/components/KeyboardShortcutsButton';
 import { KeyboardShortcutsDialog } from '@/components/KeyboardShortcutsDialog';
+import { ProfilePopover } from '@/components/ProfilePopover';
 import { useCollaboration } from '@/hooks/useCollaboration';
 import { useCollaborationAwarenessPeers } from '@/hooks/useCollaborationAwarenessPeers';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
@@ -19,7 +24,7 @@ import { readableTextHexOnBackground } from '@/lib/readableTextOnBackground';
 
 const editorContentClassName = [
 	'tiptap',
-	'min-h-48 rounded-md p-4 ring-1 ring-neutral-900/10',
+	'min-h-[60vh] rounded-b-md border border-neutral-900/10 border-t-0 p-4 sm:min-h-48',
 	'outline-none focus:outline-none focus-visible:outline-none',
 	'[&_h1]:mb-2 [&_h1]:mt-3 [&_h1]:text-3xl [&_h1]:font-bold [&_h1]:leading-tight',
 	'[&_h2]:mb-2 [&_h2]:mt-3 [&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:leading-tight',
@@ -28,10 +33,9 @@ const editorContentClassName = [
 	'[&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-neutral-900/6 [&_pre]:px-4 [&_pre]:py-3 [&_pre]:font-mono [&_pre]:text-sm [&_pre]:leading-relaxed',
 	'[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:font-[inherit] [&_pre_code]:text-[inherit]',
 	'[&_.collab-caret]:pointer-events-none [&_.collab-caret]:relative [&_.collab-caret]:-mx-px [&_.collab-caret]:border-x [&_.collab-caret]:border-solid [&_.collab-caret]:border-neutral-900 [&_.collab-caret]:break-normal',
-	'[&_.collab-caret-label]:absolute [&_.collab-caret-label]:-left-px [&_.collab-caret-label]:-top-[1.4em] [&_.collab-caret-label]:whitespace-nowrap [&_.collab-caret-label]:select-none [&_.collab-caret-label]:rounded-[3px_3px_3px_0] [&_.collab-caret-label]:text-xs [&_.collab-caret-label]:not-italic [&_.collab-caret-label]:font-semibold [&_.collab-caret-label]:leading-normal [&_.collab-caret-label]:px-[0.3rem] [&_.collab-caret-label]:py-[0.1rem]'
+	'[&_.collab-caret-label]:absolute [&_.collab-caret-label]:-left-px [&_.collab-caret-label]:-top-[1.4em] [&_.collab-caret-label]:whitespace-nowrap [&_.collab-caret-label]:select-none [&_.collab-caret-label]:rounded-[3px_3px_3px_0] [&_.collab-caret-label]:text-xs [&_.collab-caret-label]:not-italic [&_.collab-caret-label]:font-semibold [&_.collab-caret-label]:leading-normal [&_.collab-caret-label]:px-[0.3rem] [&_.collab-caret-label]:py-[0.1rem]',
+	'[&_.is-editor-empty:first-child::before]:pointer-events-none [&_.is-editor-empty:first-child::before]:float-left [&_.is-editor-empty:first-child::before]:h-0 [&_.is-editor-empty:first-child::before]:text-neutral-400 [&_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]'
 ].join(' ');
-
-const editorPlaceholderShellClassName = 'min-h-48 rounded-md ring-1 ring-neutral-900/10 bg-neutral-900/4';
 
 const collaborationCaretRender = (user: Record<string, unknown>) => {
 	const identity = parseCollaboratorIdentityFromAwareness(user);
@@ -68,6 +72,10 @@ function EnabledEditor({
 		immediatelyRender: false,
 		extensions: [
 			...getCollaborationEditorExtensions(ydoc),
+			Placeholder.configure({
+				placeholder: 'Start writing…',
+				emptyEditorClass: 'is-editor-empty'
+			}),
 			CollaborationCaret.configure({
 				provider,
 				user: collaborator,
@@ -82,26 +90,40 @@ function EnabledEditor({
 	});
 
 	if (!editor) {
-		return (
-			<div className='space-y-3 text-sm text-neutral-500'>
-				<p>Starting editor…</p>
-				<div className={editorPlaceholderShellClassName} aria-hidden />
-			</div>
-		);
+		return <EditorLoadingSkeleton />;
 	}
 
-	return <EditorContent className={editorContentClassName} editor={editor} />;
+	return (
+		<div className='overflow-hidden rounded-md ring-1 ring-neutral-900/10'>
+			<EditorToolbar editor={editor} />
+			<EditorContent className={editorContentClassName} editor={editor} />
+		</div>
+	);
 }
 
-export function Editor() {
+export type EditorProps = {
+	documentId: string;
+};
+
+export function Editor({ documentId }: EditorProps) {
 	const [sessionKey, setSessionKey] = useState(0);
 	const [shortcutsOpen, setShortcutsOpen] = useState(false);
-	const { ydoc, provider, collaborator, ready, displayConnectionStatus } = useCollaboration({ sessionKey });
+	const [dismissedError, setDismissedError] = useState<string | null>(null);
+	const {
+		ydoc,
+		provider,
+		collaborator,
+		updateCollaborator,
+		ready,
+		displayConnectionStatus,
+		error
+	} = useCollaboration({ documentName: documentId, sessionKey });
 	const awarenessPeers = useCollaborationAwarenessPeers(provider);
 
 	const handleEditorReset = () => setSessionKey(k => k + 1);
 	const handleOpenShortcuts = useCallback(() => setShortcutsOpen(true), []);
 	const handleCloseShortcuts = useCallback(() => setShortcutsOpen(false), []);
+	const handleDismissError = useCallback(() => setDismissedError(error ?? null), [error]);
 
 	useKeyboardShortcut({
 		key: 'k',
@@ -110,18 +132,33 @@ export function Editor() {
 		enabled: !shortcutsOpen
 	});
 
+	const showError = Boolean(error) && error !== dismissedError;
+
 	return (
 		<div className='space-y-3'>
-			<DocumentActiveUsersHeader
+			<AppHeader
+				documentId={documentId}
 				peers={awarenessPeers}
 				status={displayConnectionStatus}
+				currentUser={collaborator}
 				shortcutsTrigger={<KeyboardShortcutsButton onClick={handleOpenShortcuts} />}
+				profileTrigger={<ProfilePopover identity={collaborator} onSave={updateCollaborator} />}
 			/>
+
+			{showError ?
+				<ConnectionErrorBanner message={error!} onDismiss={handleDismissError} />
+			:	null}
 
 			<EditorErrorBoundary onReset={handleEditorReset}>
 				{!ready || !ydoc || !provider ?
-					<p className='text-sm text-neutral-500'>Preparing editor…</p>
-				:	<EnabledEditor key={sessionKey} ydoc={ydoc} provider={provider} collaborator={collaborator} />}
+					<EditorLoadingSkeleton />
+				:	<EnabledEditor
+						key={`${sessionKey}-${collaborator.name}-${collaborator.color}`}
+						ydoc={ydoc}
+						provider={provider}
+						collaborator={collaborator}
+					/>
+				}
 			</EditorErrorBoundary>
 
 			<KeyboardShortcutsDialog open={shortcutsOpen} onClose={handleCloseShortcuts} />

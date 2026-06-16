@@ -2,6 +2,8 @@
 
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
+import { btnSecondary } from '@/lib/ui';
+
 type EditorErrorBoundaryProps = {
 	children: ReactNode;
 	onReset: () => void;
@@ -49,7 +51,7 @@ export class EditorErrorBoundary extends Component<EditorErrorBoundaryProps, Edi
 						<button
 							type='button'
 							onClick={this.handleReset}
-							className='rounded-md border border-neutral-900/10 bg-neutral-900/4 px-3 py-2 text-sm font-medium text-neutral-950 hover:bg-neutral-900/8'>
+							className={btnSecondary}>
 							Try again
 						</button>
 					</div>
