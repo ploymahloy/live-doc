@@ -14,8 +14,8 @@ export type AppHeaderProps = {
 	status: ConnectionStatus;
 	peers: CollaboratorIdentity[];
 	currentUser: CollaboratorIdentity;
+	onUpdateProfile?: (identity: CollaboratorIdentity) => void;
 	shortcutsTrigger?: ReactNode;
-	profileTrigger?: ReactNode;
 };
 
 export function AppHeader({
@@ -23,8 +23,8 @@ export function AppHeader({
 	status,
 	peers,
 	currentUser,
-	shortcutsTrigger,
-	profileTrigger
+	onUpdateProfile,
+	shortcutsTrigger
 }: AppHeaderProps) {
 	return (
 		<header className='flex flex-wrap items-center justify-between gap-4 gap-y-3'>
@@ -39,9 +39,8 @@ export function AppHeader({
 			<div className='flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2.5'>
 				<ShareDocumentButton documentId={documentId} />
 				{shortcutsTrigger}
-				{profileTrigger}
 				<span className='hidden text-sm font-medium tracking-tight text-neutral-600 sm:inline'>Online</span>
-				<CollaboratorAvatarStack peers={peers} currentUser={currentUser} />
+				<CollaboratorAvatarStack peers={peers} currentUser={currentUser} onUpdateProfile={onUpdateProfile} />
 			</div>
 		</header>
 	);

@@ -1,22 +1,27 @@
 'use client';
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
 import {
 	COLOR_PALETTE,
-	type CollaboratorIdentity,
-	collaboratorInitials
+	type CollaboratorIdentity
 } from '@/lib/collaboratorIdentity';
 import { parseCollaboratorIdentityForWire } from '@/lib/collaborationMetadataSchemas';
 import { btnPrimary, btnSecondary, inputField } from '@/lib/ui';
-import { readableTextHexOnBackground } from '@/lib/readableTextOnBackground';
 
 type ProfilePopoverProps = {
 	identity: CollaboratorIdentity;
 	onSave: (identity: CollaboratorIdentity) => void;
+	className?: string;
+	children: (props: {
+		ref: React.RefObject<HTMLButtonElement | null>;
+		onClick: () => void;
+		'aria-expanded': boolean;
+		'aria-controls': string;
+	}) => ReactNode;
 };
 
-export function ProfilePopover({ identity, onSave }: ProfilePopoverProps) {
+export function ProfilePopover({ identity, onSave, className, children }: ProfilePopoverProps) {
 	const [open, setOpen] = useState(false);
 	const [name, setName] = useState(identity.name);
 	const [color, setColor] = useState(identity.color);
@@ -24,9 +29,6 @@ export function ProfilePopover({ identity, onSave }: ProfilePopoverProps) {
 	const popoverId = useId();
 	const triggerRef = useRef<HTMLButtonElement>(null);
 	const panelRef = useRef<HTMLDivElement>(null);
-
-	const initials = collaboratorInitials(identity.name);
-	const textColor = readableTextHexOnBackground(identity.color);
 
 	const handleToggle = useCallback(() => {
 		setOpen(prev => {
@@ -79,18 +81,13 @@ export function ProfilePopover({ identity, onSave }: ProfilePopoverProps) {
 	}, [name, color, onSave]);
 
 	return (
-		<div className='relative'>
-			<button
-				ref={triggerRef}
-				type='button'
-				onClick={handleToggle}
-				aria-expanded={open}
-				aria-controls={popoverId}
-				aria-label='Edit your profile'
-				style={{ backgroundColor: identity.color, color: textColor }}
-				className='inline-flex size-8 select-none items-center justify-center rounded-full text-[0.65rem] font-semibold tracking-wide shadow-sm ring-2 ring-neutral-950 ring-offset-1'>
-				<span aria-hidden>{initials}</span>
-			</button>
+		<div className={['relative', className].filter(Boolean).join(' ')}>
+			{children({
+				ref: triggerRef,
+				onClick: handleToggle,
+				'aria-expanded': open,
+				'aria-controls': popoverId
+			})}
 
 			{open ?
 				<div

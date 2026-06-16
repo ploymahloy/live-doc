@@ -13,7 +13,6 @@ import { EditorLoadingSkeleton } from '@/components/EditorLoadingSkeleton';
 import { EditorToolbar } from '@/components/EditorToolbar';
 import { KeyboardShortcutsButton } from '@/components/KeyboardShortcutsButton';
 import { KeyboardShortcutsDialog } from '@/components/KeyboardShortcutsDialog';
-import { ProfilePopover } from '@/components/ProfilePopover';
 import { useCollaboration } from '@/hooks/useCollaboration';
 import { useCollaborationAwarenessPeers } from '@/hooks/useCollaborationAwarenessPeers';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
@@ -141,8 +140,8 @@ export function Editor({ documentId }: EditorProps) {
 				peers={awarenessPeers}
 				status={displayConnectionStatus}
 				currentUser={collaborator}
+				onUpdateProfile={updateCollaborator}
 				shortcutsTrigger={<KeyboardShortcutsButton onClick={handleOpenShortcuts} />}
-				profileTrigger={<ProfilePopover identity={collaborator} onSave={updateCollaborator} />}
 			/>
 
 			{showError ?

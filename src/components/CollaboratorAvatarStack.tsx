@@ -1,5 +1,6 @@
 'use client';
 
+import { ProfilePopover } from '@/components/ProfilePopover';
 import type { CollaboratorIdentity } from '@/lib/collaboratorIdentity';
 import { collaboratorInitials } from '@/lib/collaboratorIdentity';
 import { readableTextHexOnBackground } from '@/lib/readableTextOnBackground';
@@ -8,6 +9,7 @@ export type CollaboratorAvatarStackProps = {
 	peers: CollaboratorIdentity[];
 	/** Highlights the current user's avatar with a ring. */
 	currentUser?: CollaboratorIdentity;
+	onUpdateProfile?: (identity: CollaboratorIdentity) => void;
 	/** Max overlapping avatars before showing a trailing +N badge. Default 8. */
 	maxVisible?: number;
 };
@@ -19,6 +21,7 @@ function isSameIdentity(a: CollaboratorIdentity, b: CollaboratorIdentity): boole
 export function CollaboratorAvatarStack({
 	peers,
 	currentUser,
+	onUpdateProfile,
 	maxVisible = 8
 }: CollaboratorAvatarStackProps) {
 	const overflow = peers.length > maxVisible ? peers.length - maxVisible : 0;
@@ -34,6 +37,41 @@ export function CollaboratorAvatarStack({
 				const initials = collaboratorInitials(peer.name);
 				const textColor = readableTextHexOnBackground(peer.color);
 				const isCurrentUser = currentUser ? isSameIdentity(peer, currentUser) : false;
+				const avatarClassName = [
+					'inline-flex size-8 select-none items-center justify-center rounded-full',
+					'ring-2 text-[0.65rem] font-semibold tracking-wide shadow-sm',
+					isCurrentUser ? 'ring-neutral-950 ring-offset-1' : 'ring-white',
+					!isCurrentUser || !onUpdateProfile ? '-ml-2 first:ml-0' : ''
+				]
+					.filter(Boolean)
+					.join(' ');
+
+				if (isCurrentUser && currentUser && onUpdateProfile) {
+					return (
+						<ProfilePopover
+							key={`${peer.name}\0${peer.color}\0${index}`}
+							className='-ml-2 first:ml-0'
+							identity={currentUser}
+							onSave={onUpdateProfile}>
+							{triggerProps => (
+								<button
+									{...triggerProps}
+									type='button'
+									role='listitem'
+									title={peer.name}
+									style={{
+										backgroundColor: peer.color,
+										color: textColor,
+										zIndex: index + 1
+									}}
+									aria-label={`${peer.name} (you). Edit profile.`}
+									className={avatarClassName}>
+									<span aria-hidden>{initials}</span>
+								</button>
+							)}
+						</ProfilePopover>
+					);
+				}
 
 				return (
 					<span
@@ -46,12 +84,7 @@ export function CollaboratorAvatarStack({
 							zIndex: index + 1
 						}}
 						aria-label={isCurrentUser ? `${peer.name} (you)` : peer.name}
-						className={[
-							'-ml-2 first:ml-0',
-							'inline-flex size-8 select-none items-center justify-center rounded-full',
-							'ring-2 text-[0.65rem] font-semibold tracking-wide shadow-sm',
-							isCurrentUser ? 'ring-neutral-950 ring-offset-1' : 'ring-white'
-						].join(' ')}>
+						className={avatarClassName}>
 						<span aria-hidden>{initials}</span>
 					</span>
 				);
