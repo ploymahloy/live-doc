@@ -1,0 +1,6 @@
+[build]
+buildCommand = "npm ci --include=dev"
+
+[deploy]
+startCommand = "npm run start:collab"
+restartPolicyType = "on_failure"

@@ -10,7 +10,7 @@ import {
 	warnInvalidAwareness
 } from '../src/lib/collaborationMetadataSchemas';
 
-const port = Number(process.env.HOCUSPOCUS_PORT ?? '1234') || 1234;
+const port = Number(process.env.PORT ?? process.env.HOCUSPOCUS_PORT ?? '1234') || 1234;
 const documentsDir = path.join(process.cwd(), 'data', 'documents');
 
 /** Debounce timers per document name for file writes. */

@@ -2,10 +2,14 @@
   "name": "live-doc",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "dev": "next dev",
     "dev:all": "concurrently -k \"next dev\" \"npm run collab\"",
     "collab": "tsx server/index.ts",
+    "start:collab": "tsx server/index.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -40,7 +44,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@tiptap/core": "^3.23.4",
-    "@types/node": "^20",
+    "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "concurrently": "^9.2.1",
