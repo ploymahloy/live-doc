@@ -71,4 +71,4 @@ All test sources live under [`src/test/collaboration/`](src/test/collaboration/)
 
 ## Demo (before I run out of free credits):
 
-<img width="400" height="251" alt="Image" src="https://github.com/user-attachments/assets/590c75ae-f6a9-482a-9572-d3a790e24624" />
+[Demo video](https://youtu.be/lC0ioSZf-AA)
