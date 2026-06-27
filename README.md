@@ -2,6 +2,10 @@
 
 [![CI/CD](https://github.com/ploymahloy/live-doc/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/ploymahloy/live-doc/actions/workflows/ci-cd.yml)
 
+## Demo (before I run out of free credits)
+
+[Demo video](https://youtu.be/lC0ioSZf-AA)
+
 ## Inspiration
 
 Built to practice working with WebSockets in a real-time collaborative editing context — multiple users editing the same document simultaneously, with cursors and presence synced over a live connection.
@@ -68,7 +72,3 @@ npm run test:watch
 Tests use the real TipTap + Yjs stack with a simulated network ([`network/yjsSyncNetwork.ts`](src/test/collaboration/network/yjsSyncNetwork.ts)) that mirrors Hocuspocus behavior. fast-check generates random editor operations (inserts, deletes, formatting) across multiple replicas.
 
 All test sources live under [`src/test/collaboration/`](src/test/collaboration/). Not covered: browser E2E, live WebSocket server, React component tests, persistence.
-
-## Demo (before I run out of free credits):
-
-[Demo video](https://youtu.be/lC0ioSZf-AA)
