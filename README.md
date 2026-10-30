@@ -38,16 +38,16 @@ flowchart TB
     subgraph server [Hocuspocus Server]
         HS[server/index.ts]
         ServerDoc[Server Y.Doc per room]
-        Disk["data/documents/*.bin"]
+        Store["Postgres update log + snapshot"]
         HS --> ServerDoc
-        HS <-->|"load / store"| Disk
+        HS <-->|"append / load"| Store
     end
 
     Provider <-->|"WebSocket: Yjs sync + awareness"| HS
     User((User)) --> Editor
 ```
 
-The document ID is a UUID in the URL. That same UUID is the WebSocket room name, the IndexedDB key, and the persistence filename on disk.
+The document ID is a UUID in the URL. That same UUID is the WebSocket room name and the IndexedDB key. The collaboration server appends each Yjs update to Postgres and compacts those updates into a snapshot.
 
 Edits flow from TipTap into a Yjs update, which is relayed over WebSocket (the server merges and broadcasts to peers) and cached locally in IndexedDB. Awareness data — cursors and collaborator avatars — travels over the same WebSocket connection, separate from document content. There is no REST API; sharing is URL-based (`/doc/{uuid}`).
 
