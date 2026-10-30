@@ -1,6 +1,24 @@
+# Stay inside Railway's Free plan ($1 of usage credit per billing cycle).
+# Railway's workspace hard limit cannot be set below $10, so the cap lives here:
+# - Serverless sleeps the service after it goes idle. Sleep costs $0.
+# - Replica limits stay under the Free plan ceiling (1 vCPU / 0.5 GB).
+# - server/railwayBudget.ts exits at an estimated $0.90 in any 31-day window.
+# Mount a volume on this service (mount path /data). The process will not
+# stay up without one, because the usage ledger has to survive sleep.
+
 [build]
 buildCommand = "npm ci --include=dev"
 
 [deploy]
 startCommand = "npm run start:collab"
 restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+numReplicas = 1
+sleepApplication = true
+overlapSeconds = 0
+drainingSeconds = 10
+
+[deploy.limitOverride.containers]
+cpu = 0.5
+# 0.5 GB, the Free plan per-service maximum.
+memoryBytes = 500000000
