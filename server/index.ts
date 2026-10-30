@@ -2,6 +2,7 @@ import { createCollabServer, type CollabServerHandle } from './collabServer';
 import { migrate } from './db/migrate';
 import { createPostgresPool, readPositiveInt } from './db/pool';
 import { createRailwayBudgetGuard, type RailwayBudgetGuard } from './railwayBudget';
+import { shutdownCollab } from './shutdown';
 import { PostgresDocumentStore } from './store/postgresStore';
 
 const port = Number(process.env.PORT ?? process.env.HOCUSPOCUS_PORT ?? '1234') || 1234;
@@ -15,9 +16,7 @@ async function shutdown(): Promise<void> {
 		return;
 	}
 	shuttingDown = true;
-	await budgetGuard?.stop();
-	await collab?.destroy();
-	process.exit(0);
+	await shutdownCollab({ collab, budgetGuard });
 }
 
 process.on('SIGINT', () => {
