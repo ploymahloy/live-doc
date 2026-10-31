@@ -1,12 +1,8 @@
 import { Server, type Hocuspocus } from '@hocuspocus/server';
 import * as Y from 'yjs';
 
-import {
-	awarenessCursorSchema,
-	collaboratorIdentityWireSchema,
-	warnInvalidAwareness
-} from '../src/lib/collaborationMetadataSchemas';
 import { isValidDocumentId } from '../src/lib/documentId';
+import { installAwarenessSanitizer } from './awarenessGuard';
 import { UnauthorizedError, verifyCapabilityToken } from './auth/capabilityToken';
 import {
 	clientIp,
@@ -127,6 +123,9 @@ export function createCollabServer(options: CollabServerOptions): CollabServerHa
 		async onDisconnect({ socketId }) {
 			messageRates.forget(socketId);
 		},
+		async afterLoadDocument({ document }) {
+			installAwarenessSanitizer(document.awareness);
+		},
 		...(options.auth
 			? {
 					async onAuthenticate({
@@ -155,26 +154,7 @@ export function createCollabServer(options: CollabServerOptions): CollabServerHa
 						}
 					}
 				}
-			: {}),
-		async onAwarenessUpdate({ states }) {
-			for (const state of states) {
-				const clientId = typeof state.clientId === 'number' ? state.clientId : -1;
-
-				if (state.user != null) {
-					const result = collaboratorIdentityWireSchema.safeParse(state.user);
-					if (!result.success) {
-						warnInvalidAwareness('user', clientId, result.error.issues);
-					}
-				}
-
-				if (state.cursor != null) {
-					const result = awarenessCursorSchema.safeParse(state.cursor);
-					if (!result.success) {
-						warnInvalidAwareness('cursor', clientId, result.error.issues);
-					}
-				}
-			}
-		}
+			: {})
 	});
 
 	return {
