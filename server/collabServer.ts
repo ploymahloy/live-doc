@@ -1,11 +1,21 @@
-import { Server } from '@hocuspocus/server';
+import { Server, type Hocuspocus } from '@hocuspocus/server';
+import * as Y from 'yjs';
 
 import {
 	awarenessCursorSchema,
 	collaboratorIdentityWireSchema,
 	warnInvalidAwareness
 } from '../src/lib/collaborationMetadataSchemas';
+import { isValidDocumentId } from '../src/lib/documentId';
 import { UnauthorizedError, verifyCapabilityToken } from './auth/capabilityToken';
+import {
+	clientIp,
+	closeCollabSocket,
+	ConnectionLimitError,
+	DEFAULT_COLLAB_LIMITS,
+	MessageRateLimiter,
+	type CollabLimits
+} from './limits';
 import type { DocumentStore } from './store/types';
 
 export type CollabServerOptions = {
@@ -18,6 +28,7 @@ export type CollabServerOptions = {
 	auth?: {
 		secret: string;
 	};
+	limits?: Partial<CollabLimits>;
 };
 
 export type CollabServerHandle = {
@@ -31,6 +42,8 @@ export type CollabServerHandle = {
 
 export function createCollabServer(options: CollabServerOptions): CollabServerHandle {
 	const compactAfterUpdates = options.compactAfterUpdates ?? 100;
+	const limits: CollabLimits = { ...DEFAULT_COLLAB_LIMITS, ...options.limits };
+	const messageRates = new MessageRateLimiter(limits.maxMessagesPerWindow, limits.messageWindowMs);
 	const inFlight = new Set<Promise<void>>();
 
 	const track = (write: Promise<void>): void => {
@@ -45,7 +58,13 @@ export function createCollabServer(options: CollabServerOptions): CollabServerHa
 		port: options.port,
 		stopOnSignals: false,
 		quiet: options.quiet ?? false,
+		websocketOptions: { maxPayload: limits.maxWebsocketPayloadBytes },
 		...(options.address ? { address: options.address } : {}),
+		async onConnect({ documentName }) {
+			if (!isValidDocumentId(documentName) || !(await options.store.hasDocument(documentName))) {
+				throw new ConnectionLimitError('document not found');
+			}
+		},
 		async onLoadDocument({ documentName }) {
 			const state = await options.store.load(documentName);
 			return state ?? undefined;
@@ -78,6 +97,35 @@ export function createCollabServer(options: CollabServerOptions): CollabServerHa
 		},
 		async beforeUnloadDocument({ documentName }) {
 			await options.store.compact(documentName);
+		},
+		async beforeHandleMessage({ update, socketId, connection }) {
+			if (update.byteLength > limits.maxWebsocketPayloadBytes || !messageRates.allow(socketId)) {
+				const reason = update.byteLength > limits.maxWebsocketPayloadBytes ? 'payload too large' : 'rate limit exceeded';
+				closeCollabSocket(connection, reason);
+				throw new ConnectionLimitError(reason);
+			}
+		},
+		async beforeSync({ document, type, payload, connection }) {
+			// Sync step 1 only asks for state. Empty updates are two bytes.
+			if (type === 0 || payload.byteLength <= 2) {
+				return;
+			}
+			const size = Y.encodeStateAsUpdate(document).byteLength;
+			if (size + payload.byteLength > limits.maxDocumentBytes) {
+				closeCollabSocket(connection, 'document too large');
+				throw new ConnectionLimitError('document too large');
+			}
+		},
+		async connected({ documentName, instance, connection, request }) {
+			const room = instance.documents.get(documentName);
+			const roomCount = room?.getConnectionsCount() ?? 0;
+			const ipCount = countConnectionsForIp(instance, clientIp(request));
+			if (roomCount > limits.maxConnectionsPerDocument || ipCount > limits.maxConnectionsPerIp) {
+				closeCollabSocket(connection, 'too many connections');
+			}
+		},
+		async onDisconnect({ socketId }) {
+			messageRates.forget(socketId);
 		},
 		...(options.auth
 			? {
@@ -142,4 +190,16 @@ export function createCollabServer(options: CollabServerOptions): CollabServerHa
 			}
 		}
 	};
+}
+
+function countConnectionsForIp(instance: Hocuspocus, ip: string): number {
+	let count = 0;
+	for (const document of instance.documents.values()) {
+		for (const connection of document.getConnections()) {
+			if (clientIp(connection.request) === ip) {
+				count += 1;
+			}
+		}
+	}
+	return count;
 }

@@ -2,6 +2,7 @@ import { readCollabJwtSecret } from './auth/capabilityToken';
 import { createCollabServer, type CollabServerHandle } from './collabServer';
 import { migrate } from './db/migrate';
 import { createPostgresPool, readPositiveInt } from './db/pool';
+import { readCollabLimits } from './limits';
 import { createRailwayBudgetGuard, type RailwayBudgetGuard } from './railwayBudget';
 import { shutdownCollab } from './shutdown';
 import { PostgresDocumentStore } from './store/postgresStore';
@@ -47,6 +48,7 @@ async function main(): Promise<void> {
 		store,
 		port,
 		auth: { secret },
+		limits: readCollabLimits(),
 		compactAfterUpdates: readPositiveInt(process.env.DOCUMENT_COMPACT_AFTER_UPDATES, 100)
 	});
 	await collab.listen();

@@ -62,6 +62,7 @@ describe('offline IndexedDB reconnect', () => {
 		});
 
 		const store = new MemoryDocumentStore();
+		await store.ensureDocument(documentName);
 		try {
 			await new Promise((resolve) => setTimeout(resolve, 80));
 
