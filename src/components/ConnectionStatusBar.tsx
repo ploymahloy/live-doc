@@ -10,10 +10,12 @@ function statusLabel(status: ConnectionStatus): string {
 	switch (status) {
 		case 'connecting':
 			return 'Connecting';
+		case 'reconnecting':
+			return 'Reconnecting';
 		case 'connected':
 			return 'Connected';
-		case 'disconnected':
-			return 'Offline';
+		case 'offline':
+			return 'Offline · local changes saved';
 	}
 }
 
@@ -26,9 +28,16 @@ function StatusDot({ status }: { status: ConnectionStatus }) {
 					<span className='relative inline-flex h-2.5 w-2.5 rounded-full bg-neutral-600/80' />
 				</span>
 			);
+		case 'reconnecting':
+			return (
+				<span className='relative flex h-2.5 w-2.5' aria-hidden>
+					<span className='absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-500/40 opacity-75' />
+					<span className='relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-600/80' />
+				</span>
+			);
 		case 'connected':
 			return <span className='h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-600/85' aria-hidden />;
-		case 'disconnected':
+		case 'offline':
 			return <span className='h-2.5 w-2.5 shrink-0 rounded-full bg-amber-600/75' aria-hidden />;
 	}
 }
