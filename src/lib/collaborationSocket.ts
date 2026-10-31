@@ -2,6 +2,7 @@ import {
 	HocuspocusProvider,
 	HocuspocusProviderWebsocket,
 	type HocuspocusProviderWebsocketConfiguration,
+	type onAuthenticationFailedParameters,
 	type onDisconnectParameters,
 	type onStatusParameters
 } from '@hocuspocus/provider';
@@ -44,8 +45,10 @@ export type CollaborationProviderOptions = {
 	name: string;
 	document: Y.Doc;
 	socket?: CollaborationSocketOverrides;
+	token?: string | (() => string) | (() => Promise<string>) | null;
 	onStatus?: (data: onStatusParameters) => void;
 	onDisconnect?: (data: onDisconnectParameters) => void;
+	onAuthenticationFailed?: (data: onAuthenticationFailedParameters) => void;
 };
 
 export function createCollaborationProvider(options: CollaborationProviderOptions): {
@@ -57,8 +60,10 @@ export function createCollaborationProvider(options: CollaborationProviderOption
 		name: options.name,
 		document: options.document,
 		websocketProvider: socket,
+		...(options.token != null ? { token: options.token } : {}),
 		...(options.onStatus ? { onStatus: options.onStatus } : {}),
-		...(options.onDisconnect ? { onDisconnect: options.onDisconnect } : {})
+		...(options.onDisconnect ? { onDisconnect: options.onDisconnect } : {}),
+		...(options.onAuthenticationFailed ? { onAuthenticationFailed: options.onAuthenticationFailed } : {})
 	});
 	// A caller-supplied socket is not attached or destroyed by the provider.
 	provider.attach();

@@ -1,3 +1,4 @@
+import { readCollabJwtSecret } from './auth/capabilityToken';
 import { createCollabServer, type CollabServerHandle } from './collabServer';
 import { migrate } from './db/migrate';
 import { createPostgresPool, readPositiveInt } from './db/pool';
@@ -38,12 +39,14 @@ async function main(): Promise<void> {
 	}
 	budgetGuard.start();
 
+	const secret = readCollabJwtSecret();
 	const pool = createPostgresPool();
 	await migrate(pool);
 	const store = new PostgresDocumentStore(pool);
 	collab = createCollabServer({
 		store,
 		port,
+		auth: { secret },
 		compactAfterUpdates: readPositiveInt(process.env.DOCUMENT_COMPACT_AFTER_UPDATES, 100)
 	});
 	await collab.listen();

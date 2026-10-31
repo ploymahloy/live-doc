@@ -23,6 +23,8 @@ export type CollaborationOptions = {
 	/** Defaults to `documentName` so local cache matches the synced room. */
 	indexedDbName?: string;
 	wsUrl?: string;
+	/** Capability token sent to the collaboration server. */
+	token?: string;
 	/** Bump to tear down and recreate Y.Doc, IndexedDB persistence, and Hocuspocus provider. */
 	sessionKey?: number;
 };
@@ -36,6 +38,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 	const documentName = options.documentName ?? DEFAULT_COLLABORATION_DOCUMENT_NAME;
 	const indexedDbName = options.indexedDbName ?? documentName;
 	const wsUrl = options.wsUrl ?? process.env.NEXT_PUBLIC_HOCUSPOCUS_URL ?? 'ws://127.0.0.1:1234';
+	const token = options.token;
 	const sessionKey = options.sessionKey ?? 0;
 
 	const [collaborator, setCollaborator] = useState<CollaboratorIdentity>(() => getSessionCollaboratorIdentity());
@@ -59,6 +62,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 
 	useEffect(() => {
 		let cancelled = false;
+		let authFailed = false;
 		hasConnectedOnceRef.current = false;
 		offlineDelayElapsedRef.current = false;
 		const doc = new Y.Doc();
@@ -75,6 +79,14 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			url: wsUrl,
 			name: documentName,
 			document: doc,
+			...(token ? { token } : {}),
+			onAuthenticationFailed: ({ reason }) => {
+				if (cancelled) {
+					return;
+				}
+				authFailed = true;
+				setError(reason || 'You do not have access to this document');
+			},
 			onStatus: ({ status }) => {
 				if (cancelled) {
 					return;
@@ -86,7 +98,9 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 					clearDisconnectDisplayTimer();
 					setConnectionStatus('connected');
 					setDisplayConnectionStatus('connected');
-					setError(undefined);
+					if (!authFailed) {
+						setError(undefined);
+					}
 					return;
 				}
 
@@ -161,7 +175,7 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 		};
 		// collaborator is read once at provider setup; updates go through updateCollaborator.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [documentName, indexedDbName, sessionKey, wsUrl]);
+	}, [documentName, indexedDbName, sessionKey, token, wsUrl]);
 
 	return {
 		ydoc,

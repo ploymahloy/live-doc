@@ -170,6 +170,15 @@ export class PostgresDocumentStore implements DocumentStore {
 		});
 	}
 
+	async hasDocument(documentName: string): Promise<boolean> {
+		const result = await this.pool.query('SELECT 1 FROM documents WHERE id = $1', [documentName]);
+		return (result.rowCount ?? 0) > 0;
+	}
+
+	async ensureDocument(documentName: string): Promise<void> {
+		await this.pool.query('INSERT INTO documents (id) VALUES ($1) ON CONFLICT (id) DO NOTHING', [documentName]);
+	}
+
 	async close(): Promise<void> {
 		await this.pool.end();
 	}

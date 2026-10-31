@@ -47,6 +47,14 @@ class GatedDocumentStore implements DocumentStore {
 		return this.memory.compact(documentName);
 	}
 
+	hasDocument(documentName: string): Promise<boolean> {
+		return this.memory.hasDocument(documentName);
+	}
+
+	ensureDocument(documentName: string): Promise<void> {
+		return this.memory.ensureDocument(documentName);
+	}
+
 	close(): Promise<void> {
 		return this.memory.close();
 	}

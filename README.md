@@ -49,7 +49,7 @@ flowchart TB
 
 The document ID is a UUID in the URL. That same UUID is the WebSocket room name and the IndexedDB key. The collaboration server appends each Yjs update to Postgres and compacts those updates into a snapshot.
 
-Edits flow from TipTap into a Yjs update, which is relayed over WebSocket (the server merges and broadcasts to peers) and cached locally in IndexedDB. Awareness data — cursors and collaborator avatars — travels over the same WebSocket connection, separate from document content. There is no REST API; sharing is URL-based (`/doc/{uuid}`).
+Edits flow from TipTap into a Yjs update, which is relayed over WebSocket (the server merges and broadcasts to peers) and cached locally in IndexedDB. Awareness data — cursors and collaborator avatars — travels over the same WebSocket connection, separate from document content. Creating a document and copying a share link go through `/api/documents`, which stores the document and mints a capability token. The share URL is `/doc/{uuid}?token=...`. Viewers can open the document but cannot change it.
 
 Key source files: [`src/hooks/useCollaboration.ts`](src/hooks/useCollaboration.ts), [`server/index.ts`](server/index.ts), [`src/lib/collaborationEditor.ts`](src/lib/collaborationEditor.ts).
 

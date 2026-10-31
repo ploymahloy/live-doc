@@ -2,15 +2,35 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
-import { createDocumentId } from '@/lib/documentId';
 import { btnPrimary } from '@/lib/ui';
 
 export function LandingPage() {
 	const router = useRouter();
+	const [pending, setPending] = useState(false);
+	const [error, setError] = useState('');
 
-	const handleNewDocument = () => {
-		router.push(`/doc/${createDocumentId()}`);
+	const handleNewDocument = async () => {
+		setPending(true);
+		setError('');
+		try {
+			const response = await fetch('/api/documents', { method: 'POST' });
+			if (!response.ok) {
+				setError('Could not create a document');
+				return;
+			}
+			const body = (await response.json()) as { id?: string; token?: string };
+			if (!body.id || !body.token) {
+				setError('Could not create a document');
+				return;
+			}
+			router.push(`/doc/${body.id}?token=${encodeURIComponent(body.token)}`);
+		} catch {
+			setError('Could not create a document');
+		} finally {
+			setPending(false);
+		}
 	};
 
 	return (
@@ -28,9 +48,10 @@ export function LandingPage() {
 					</p>
 				</div>
 
-				<button type='button' onClick={handleNewDocument} className={btnPrimary}>
+				<button type='button' onClick={handleNewDocument} className={btnPrimary} disabled={pending}>
 					New document
 				</button>
+				{error ? <p className='text-sm text-neutral-600'>{error}</p> : null}
 			</div>
 		</div>
 	);

@@ -5,6 +5,7 @@ import {
 	collaboratorIdentityWireSchema,
 	warnInvalidAwareness
 } from '../src/lib/collaborationMetadataSchemas';
+import { UnauthorizedError, verifyCapabilityToken } from './auth/capabilityToken';
 import type { DocumentStore } from './store/types';
 
 export type CollabServerOptions = {
@@ -13,6 +14,10 @@ export type CollabServerOptions = {
 	address?: string;
 	compactAfterUpdates?: number;
 	quiet?: boolean;
+	/** When set, connections must present a capability token for this document. */
+	auth?: {
+		secret: string;
+	};
 };
 
 export type CollabServerHandle = {
@@ -74,6 +79,35 @@ export function createCollabServer(options: CollabServerOptions): CollabServerHa
 		async beforeUnloadDocument({ documentName }) {
 			await options.store.compact(documentName);
 		},
+		...(options.auth
+			? {
+					async onAuthenticate({
+						token,
+						documentName,
+						connectionConfig
+					}: {
+						token: string;
+						documentName: string;
+						connectionConfig: { readOnly: boolean };
+					}) {
+						try {
+							const claims = await verifyCapabilityToken(options.auth!.secret, token);
+							if (claims.documentId !== documentName) {
+								throw new UnauthorizedError();
+							}
+							if (claims.role === 'viewer') {
+								connectionConfig.readOnly = true;
+							}
+							return { role: claims.role, documentId: claims.documentId };
+						} catch (error) {
+							if (error instanceof UnauthorizedError) {
+								throw error;
+							}
+							throw new UnauthorizedError();
+						}
+					}
+				}
+			: {}),
 		async onAwarenessUpdate({ states }) {
 			for (const state of states) {
 				const clientId = typeof state.clientId === 'number' ? state.clientId : -1;

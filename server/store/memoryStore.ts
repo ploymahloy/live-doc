@@ -72,6 +72,16 @@ export class MemoryDocumentStore implements DocumentStore {
 		});
 	}
 
+	async hasDocument(documentName: string): Promise<boolean> {
+		return this.exclusive(documentName, () => this.documents.has(documentName));
+	}
+
+	async ensureDocument(documentName: string): Promise<void> {
+		await this.exclusive(documentName, () => {
+			this.logFor(documentName);
+		});
+	}
+
 	async close(): Promise<void> {
 		this.tails.clear();
 	}
