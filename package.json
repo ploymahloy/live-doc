@@ -52,6 +52,7 @@
     "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "fake-indexeddb": "^6.2.7",
     "fast-check": "^4.5.3",
     "happy-dom": "^20.0.11",
     "lib0": "^0.2.115",
