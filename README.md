@@ -2,9 +2,9 @@
 
 [![CI/CD](https://github.com/ploymahloy/live-doc/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/ploymahloy/live-doc/actions/workflows/ci-cd.yml)
 
-## Demo (before I run out of free credits)
+## Demo (RIP Railway)
 
-[Demo video](https://youtu.be/lC0ioSZf-AA)
+![Demo](public/assets/live-doc_demo.gif)
 
 ## Inspiration
 
