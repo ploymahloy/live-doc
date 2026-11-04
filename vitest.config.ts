@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
 	test: {
 		environment: 'happy-dom',
-		include: ['src/**/*.test.ts', 'src/**/*.property.test.ts', 'server/**/*.test.ts'],
+		include: ['src/**/*.test.ts', 'src/**/*.property.test.ts', 'server/**/*.test.ts', 'server/**/*.property.test.ts'],
 		testTimeout: 120_000
 	},
 	resolve: {

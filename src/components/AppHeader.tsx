@@ -11,6 +11,8 @@ import type { CollaboratorIdentity } from '@/lib/collaboratorIdentity';
 
 export type AppHeaderProps = {
 	documentId: string;
+	token: string;
+	canShare: boolean;
 	status: ConnectionStatus;
 	peers: CollaboratorIdentity[];
 	currentUser: CollaboratorIdentity;
@@ -20,6 +22,8 @@ export type AppHeaderProps = {
 
 export function AppHeader({
 	documentId,
+	token,
+	canShare,
 	status,
 	peers,
 	currentUser,
@@ -36,7 +40,7 @@ export function AppHeader({
 					<ConnectionStatusBar status={status} />
 				</div>
 				<div className='flex min-w-0 flex-wrap items-center justify-end gap-2.5'>
-					<ShareDocumentButton documentId={documentId} />
+					{canShare ? <ShareDocumentButton documentId={documentId} token={token} /> : null}
 					{shortcutsTrigger}
 					<CollaboratorAvatarStack peers={peers} currentUser={currentUser} onUpdateProfile={onUpdateProfile} />
 				</div>

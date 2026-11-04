@@ -6,6 +6,8 @@ import { IndexeddbPersistence } from 'y-indexeddb';
 import * as Y from 'yjs';
 
 import { parseCollaboratorIdentityForWire } from '@/lib/collaborationMetadataSchemas';
+import { createCollaborationProvider } from '@/lib/collaborationSocket';
+import { deriveConnectionStatus, type ConnectionStatus } from '@/lib/connectionStatus';
 import {
 	getSessionCollaboratorIdentity,
 	setSessionCollaboratorIdentity,
@@ -21,30 +23,22 @@ export type CollaborationOptions = {
 	/** Defaults to `documentName` so local cache matches the synced room. */
 	indexedDbName?: string;
 	wsUrl?: string;
+	/** Capability token sent to the collaboration server. */
+	token?: string;
 	/** Bump to tear down and recreate Y.Doc, IndexedDB persistence, and Hocuspocus provider. */
 	sessionKey?: number;
 };
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
+export type { ConnectionStatus };
 
 /** Delay before showing offline in the UI; absorbs Strict Mode and brief socket churn. */
 const DISCONNECT_DISPLAY_DELAY_MS = 300;
-
-function mapWebSocketStatus(status: WebSocketStatus): ConnectionStatus {
-	switch (status) {
-		case WebSocketStatus.Connected:
-			return 'connected';
-		case WebSocketStatus.Connecting:
-			return 'connecting';
-		default:
-			return 'disconnected';
-	}
-}
 
 export function useCollaboration(options: CollaborationOptions = {}) {
 	const documentName = options.documentName ?? DEFAULT_COLLABORATION_DOCUMENT_NAME;
 	const indexedDbName = options.indexedDbName ?? documentName;
 	const wsUrl = options.wsUrl ?? process.env.NEXT_PUBLIC_HOCUSPOCUS_URL ?? 'ws://127.0.0.1:1234';
+	const token = options.token;
 	const sessionKey = options.sessionKey ?? 0;
 
 	const [collaborator, setCollaborator] = useState<CollaboratorIdentity>(() => getSessionCollaboratorIdentity());
@@ -55,6 +49,8 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 	const [displayConnectionStatus, setDisplayConnectionStatus] = useState<ConnectionStatus>('connecting');
 	const [error, setError] = useState<string | undefined>();
 	const disconnectDisplayTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const hasConnectedOnceRef = useRef(false);
+	const offlineDelayElapsedRef = useRef(false);
 	const providerRef = useRef<HocuspocusProvider | null>(null);
 
 	const updateCollaborator = useCallback((identity: CollaboratorIdentity) => {
@@ -66,6 +62,9 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 
 	useEffect(() => {
 		let cancelled = false;
+		let authFailed = false;
+		hasConnectedOnceRef.current = false;
+		offlineDelayElapsedRef.current = false;
 		const doc = new Y.Doc();
 		const persistence = new IndexeddbPersistence(indexedDbName, doc);
 
@@ -76,31 +75,62 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			}
 		};
 
-		const hp = new HocuspocusProvider({
+		const { provider: hp, socket } = createCollaborationProvider({
 			url: wsUrl,
 			name: documentName,
 			document: doc,
-			// @ts-expect-error Provider typings omit websocket-layer options; runtime passes them to HocuspocusProviderWebsocket.
-			maxAttempts: 1,
+			...(token ? { token } : {}),
+			onAuthenticationFailed: ({ reason }) => {
+				if (cancelled) {
+					return;
+				}
+				authFailed = true;
+				setError(reason || 'You do not have access to this document');
+			},
 			onStatus: ({ status }) => {
 				if (cancelled) {
 					return;
 				}
-				const next = mapWebSocketStatus(status);
-				setConnectionStatus(next);
-				if (next === 'connected' || next === 'connecting') {
+
+				if (status === WebSocketStatus.Connected) {
+					hasConnectedOnceRef.current = true;
+					offlineDelayElapsedRef.current = false;
 					clearDisconnectDisplayTimer();
-					setDisplayConnectionStatus(next);
-					setError(undefined);
-				} else {
-					clearDisconnectDisplayTimer();
-					disconnectDisplayTimerRef.current = setTimeout(() => {
-						disconnectDisplayTimerRef.current = null;
-						if (!cancelled) {
-							setDisplayConnectionStatus('disconnected');
-						}
-					}, DISCONNECT_DISPLAY_DELAY_MS);
+					setConnectionStatus('connected');
+					setDisplayConnectionStatus('connected');
+					if (!authFailed) {
+						setError(undefined);
+					}
+					return;
 				}
+
+				const next = deriveConnectionStatus({
+					socketStatus: status,
+					hasConnectedOnce: hasConnectedOnceRef.current,
+					offlineDelayElapsed: offlineDelayElapsedRef.current
+				});
+				setConnectionStatus(next);
+				setDisplayConnectionStatus(next);
+
+				if (status !== WebSocketStatus.Disconnected || offlineDelayElapsedRef.current) {
+					return;
+				}
+
+				clearDisconnectDisplayTimer();
+				disconnectDisplayTimerRef.current = setTimeout(() => {
+					disconnectDisplayTimerRef.current = null;
+					if (cancelled) {
+						return;
+					}
+					offlineDelayElapsedRef.current = true;
+					const offline = deriveConnectionStatus({
+						socketStatus: WebSocketStatus.Disconnected,
+						hasConnectedOnce: hasConnectedOnceRef.current,
+						offlineDelayElapsed: true
+					});
+					setConnectionStatus(offline);
+					setDisplayConnectionStatus(offline);
+				}, DISCONNECT_DISPLAY_DELAY_MS);
 			},
 			onDisconnect: ({ event }) => {
 				if (!cancelled && event.reason) {
@@ -134,16 +164,18 @@ export function useCollaboration(options: CollaborationOptions = {}) {
 			setProvider(null);
 			uninstallAwarenessCursorThrottle();
 			hp.destroy();
+			socket.destroy();
 			void persistence.destroy();
 			doc.destroy();
 			setYdoc(null);
 			setReady(false);
-			setConnectionStatus('disconnected');
+			setConnectionStatus('connecting');
+			setDisplayConnectionStatus('connecting');
 			setError(undefined);
 		};
 		// collaborator is read once at provider setup; updates go through updateCollaborator.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [documentName, indexedDbName, sessionKey, wsUrl]);
+	}, [documentName, indexedDbName, sessionKey, token, wsUrl]);
 
 	return {
 		ydoc,

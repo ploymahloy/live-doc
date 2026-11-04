@@ -17,6 +17,7 @@ import { useCollaboration } from '@/hooks/useCollaboration';
 import { useCollaborationAwarenessPeers } from '@/hooks/useCollaborationAwarenessPeers';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { getCollaborationEditorExtensions, seedCollaborationFragmentIfEmpty } from '@/lib/collaborationEditor';
+import { peekCapabilityRole } from '@/lib/capabilityRole';
 import { parseCollaboratorIdentityFromAwareness } from '@/lib/collaborationMetadataSchemas';
 import { DEFAULT_COLLABORATOR_DISPLAY_COLOR, type CollaboratorIdentity } from '@/lib/collaboratorIdentity';
 import { readableTextHexOnBackground } from '@/lib/readableTextOnBackground';
@@ -58,16 +59,18 @@ const collaborationCaretRender = (user: Record<string, unknown>) => {
 function EnabledEditor({
 	ydoc,
 	provider,
-	collaborator
+	collaborator,
+	readOnly
 }: {
 	ydoc: import('yjs').Doc;
 	provider: HocuspocusProvider;
 	collaborator: CollaboratorIdentity;
+	readOnly: boolean;
 }) {
-	// TODO: Write a test(s) to enforce this.
 	// Offline is a sync concern only: never tie `editable` to WebSocket status.
+	// Viewers are read-only because their capability token says so.
 	const editor = useEditor({
-		editable: true,
+		editable: !readOnly,
 		immediatelyRender: false,
 		extensions: [
 			...getCollaborationEditorExtensions(ydoc),
@@ -82,6 +85,9 @@ function EnabledEditor({
 			})
 		],
 		onCreate: ({ editor: createdEditor }) => {
+			if (readOnly) {
+				return;
+			}
 			seedCollaborationFragmentIfEmpty(ydoc, html => {
 				createdEditor.commands.setContent(html);
 			});
@@ -94,7 +100,7 @@ function EnabledEditor({
 
 	return (
 		<div className='overflow-hidden rounded-md ring-1 ring-neutral-900/10'>
-			<EditorToolbar editor={editor} />
+			{readOnly ? null : <EditorToolbar editor={editor} />}
 			<EditorContent className={editorContentClassName} editor={editor} />
 		</div>
 	);
@@ -102,9 +108,10 @@ function EnabledEditor({
 
 export type EditorProps = {
 	documentId: string;
+	token: string;
 };
 
-export function Editor({ documentId }: EditorProps) {
+export function Editor({ documentId, token }: EditorProps) {
 	const [sessionKey, setSessionKey] = useState(0);
 	const [shortcutsOpen, setShortcutsOpen] = useState(false);
 	const [dismissedError, setDismissedError] = useState<string | null>(null);
@@ -116,7 +123,8 @@ export function Editor({ documentId }: EditorProps) {
 		ready,
 		displayConnectionStatus,
 		error
-	} = useCollaboration({ documentName: documentId, sessionKey });
+	} = useCollaboration({ documentName: documentId, sessionKey, token });
+	const readOnly = peekCapabilityRole(token) === 'viewer';
 	const awarenessPeers = useCollaborationAwarenessPeers(provider);
 
 	const handleEditorReset = () => setSessionKey(k => k + 1);
@@ -137,6 +145,8 @@ export function Editor({ documentId }: EditorProps) {
 		<div className='space-y-3'>
 			<AppHeader
 				documentId={documentId}
+				token={token}
+				canShare={!readOnly}
 				peers={awarenessPeers}
 				status={displayConnectionStatus}
 				currentUser={collaborator}
@@ -151,11 +161,12 @@ export function Editor({ documentId }: EditorProps) {
 			<EditorErrorBoundary onReset={handleEditorReset}>
 				{!ready || !ydoc || !provider ?
 					<EditorLoadingSkeleton />
-				:	<EnabledEditor
-						key={`${sessionKey}-${collaborator.name}-${collaborator.color}`}
+				:						<EnabledEditor
+						key={`${sessionKey}-${collaborator.name}-${collaborator.color}-${readOnly ? 'view' : 'edit'}`}
 						ydoc={ydoc}
 						provider={provider}
 						collaborator={collaborator}
+						readOnly={readOnly}
 					/>
 				}
 			</EditorErrorBoundary>
